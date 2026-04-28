@@ -21,6 +21,9 @@ common directory:
 The prediction JSONL supplies dialogue text and model-predicted events. Gold,
 prediction, and match details are read from the audit reports.
 
+To keep the browser responsive, the app rejects artifacts larger than 100 MB,
+archives with more than 500 entries, and any parsed text file larger than 50 MB.
+
 ## Local Development
 
 Use Bun for local commands:

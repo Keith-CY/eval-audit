@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { annotationStorageKey } from "../domain/annotations";
 import { normalizeDataset } from "../domain/normalize";
 import type { DialogueReview, ReviewDataset, RowAudit } from "../domain/types";
@@ -64,7 +64,10 @@ function twoDialogueDataset(): ReviewDataset {
 }
 
 describe("Workbench", () => {
-  beforeEach(() => localStorage.clear());
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    localStorage.clear();
+  });
 
   it("renders summary metrics, dialogue text, event comparison, and failure reason", () => {
     render(<Workbench dataset={dataset()} />);
@@ -82,6 +85,20 @@ describe("Workbench", () => {
     await userEvent.type(screen.getByLabelText("Review note"), "需要复核");
 
     expect(screen.getByText("Exportable annotations: 1")).toBeInTheDocument();
+  });
+
+  it("keeps annotations in memory and warns when browser storage is unavailable", async () => {
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("quota exceeded");
+    });
+    render(<Workbench dataset={dataset()} />);
+
+    await userEvent.selectOptions(screen.getByLabelText("Review status"), "has_issue");
+
+    expect(screen.getByText("Exportable annotations: 1")).toBeInTheDocument();
+    expect(screen.getByRole("status", { name: "Dataset warnings" })).toHaveTextContent(
+      "Browser storage is unavailable"
+    );
   });
 
   it("keeps export disabled until an annotation status or note changes", async () => {

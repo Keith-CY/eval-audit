@@ -11,13 +11,50 @@ import type {
   RowAudit
 } from "./types";
 
+export const EVALUATION_ZIP_LIMITS = {
+  maxZipBytes: 100 * 1024 * 1024,
+  maxEntries: 500,
+  maxTextChars: 50 * 1024 * 1024
+};
+
+function formatMegabytes(bytes: number): string {
+  return `${Math.round(bytes / 1024 / 1024)} MB`;
+}
+
+function assertZipFileWithinLimits(file: File): void {
+  if (file.size > EVALUATION_ZIP_LIMITS.maxZipBytes) {
+    throw new Error(
+      `Evaluation zip is too large. Maximum supported size is ${formatMegabytes(
+        EVALUATION_ZIP_LIMITS.maxZipBytes
+      )}.`
+    );
+  }
+}
+
+function assertEntryCountWithinLimits(paths: string[]): void {
+  if (paths.length > EVALUATION_ZIP_LIMITS.maxEntries) {
+    throw new Error(
+      `Evaluation zip contains too many files. Maximum supported entries is ${EVALUATION_ZIP_LIMITS.maxEntries}.`
+    );
+  }
+}
+
 async function readText(zip: JSZip, path: string): Promise<string> {
   const entry = zip.file(path);
   if (!entry) {
     throw new Error(`Zip entry not found: ${path}`);
   }
 
-  return entry.async("text");
+  const text = await entry.async("text");
+  if (text.length > EVALUATION_ZIP_LIMITS.maxTextChars) {
+    throw new Error(
+      `${path} is too large after decompression. Maximum supported text size is ${formatMegabytes(
+        EVALUATION_ZIP_LIMITS.maxTextChars
+      )}.`
+    );
+  }
+
+  return text;
 }
 
 function parseJson<T>(sourceName: string, text: string): T {
@@ -29,8 +66,13 @@ function parseJson<T>(sourceName: string, text: string): T {
 }
 
 export async function loadEvaluationZip(file: File): Promise<ReviewDataset> {
+  assertZipFileWithinLimits(file);
+
   const zip = await JSZip.loadAsync(file);
-  const entries = classifyZipEntries(Object.keys(zip.files));
+  const zipPaths = Object.keys(zip.files);
+  assertEntryCountWithinLimits(zipPaths);
+
+  const entries = classifyZipEntries(zipPaths);
 
   if (
     entries.missingRequired.length > 0 ||

@@ -6,7 +6,7 @@ import {
   rowAuditsFixture,
   summaryFixture
 } from "../test/fixtures";
-import { loadEvaluationZip } from "./loadEvaluationZip";
+import { EVALUATION_ZIP_LIMITS, loadEvaluationZip } from "./loadEvaluationZip";
 
 async function makeZip(files: Record<string, string>): Promise<File> {
   const zip = new JSZip();
@@ -46,6 +46,29 @@ describe("loadEvaluationZip", () => {
 
     await expect(loadEvaluationZip(file)).rejects.toThrow(
       "Missing required files: row_audit_report.jsonl, event_eval_details.jsonl, prediction jsonl"
+    );
+  });
+
+  it("rejects oversized zip files before parsing", async () => {
+    const oversizedFile = {
+      size: EVALUATION_ZIP_LIMITS.maxZipBytes + 1
+    } as File;
+
+    await expect(loadEvaluationZip(oversizedFile)).rejects.toThrow(
+      "Evaluation zip is too large"
+    );
+  });
+
+  it("rejects zip files with too many entries", async () => {
+    const files = completeArtifactFiles();
+    for (let index = 0; index <= EVALUATION_ZIP_LIMITS.maxEntries; index += 1) {
+      files[`extra/${index}.txt`] = "";
+    }
+
+    const file = await makeZip(files);
+
+    await expect(loadEvaluationZip(file)).rejects.toThrow(
+      "Evaluation zip contains too many files"
     );
   });
 

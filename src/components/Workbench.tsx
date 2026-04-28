@@ -44,10 +44,14 @@ function downloadText(filename: string, text: string): void {
   URL.revokeObjectURL(url);
 }
 
+const storageWarning =
+  "Browser storage is unavailable. Current annotations are kept in memory; export before leaving this page.";
+
 export function Workbench({ dataset }: WorkbenchProps) {
   const [annotations, setAnnotations] = useState<AnnotationMap>(() =>
     loadAnnotations(dataset.artifact)
   );
+  const [annotationWarning, setAnnotationWarning] = useState<string | null>(null);
   const [activeDialogueId, setActiveDialogueId] = useState<string | null>(
     dataset.dialogues[0]?.dialogue_id ?? null
   );
@@ -57,11 +61,22 @@ export function Workbench({ dataset }: WorkbenchProps) {
 
   useEffect(() => {
     setAnnotations(loadAnnotations(dataset.artifact));
+    setAnnotationWarning(null);
     setActiveDialogueId(dataset.dialogues[0]?.dialogue_id ?? null);
     setSearch("");
     setReviewStatus("all");
     setEvaluationStatus("all");
   }, [dataset]);
+
+  function persistAnnotations(nextAnnotations: AnnotationMap) {
+    setAnnotations(nextAnnotations);
+
+    if (saveAnnotations(dataset.artifact, nextAnnotations)) {
+      setAnnotationWarning(null);
+    } else {
+      setAnnotationWarning(storageWarning);
+    }
+  }
 
   const filteredDialogues = useMemo(
     () =>
@@ -108,8 +123,7 @@ export function Workbench({ dataset }: WorkbenchProps) {
       updated_at: new Date().toISOString()
     };
     const nextAnnotations = { ...annotations, [activeDialogue.dialogue_id]: updated };
-    setAnnotations(nextAnnotations);
-    saveAnnotations(dataset.artifact, nextAnnotations);
+    persistAnnotations(nextAnnotations);
   }
 
   function clearCurrent() {
@@ -119,13 +133,16 @@ export function Workbench({ dataset }: WorkbenchProps) {
 
     const nextAnnotations = { ...annotations };
     delete nextAnnotations[activeDialogue.dialogue_id];
-    setAnnotations(nextAnnotations);
-    saveAnnotations(dataset.artifact, nextAnnotations);
+    persistAnnotations(nextAnnotations);
   }
 
   function clearAll() {
     setAnnotations({});
-    clearAnnotations(dataset.artifact);
+    if (clearAnnotations(dataset.artifact)) {
+      setAnnotationWarning(null);
+    } else {
+      setAnnotationWarning(storageWarning);
+    }
   }
 
   function exportJsonl() {
@@ -144,6 +161,8 @@ export function Workbench({ dataset }: WorkbenchProps) {
     }
   }
 
+  const warnings = annotationWarning ? [...dataset.warnings, annotationWarning] : dataset.warnings;
+
   return (
     <section className="workbench">
       <SummaryBar
@@ -151,9 +170,9 @@ export function Workbench({ dataset }: WorkbenchProps) {
         reviewedCount={reviewedCount}
         exportableCount={exportableCount}
       />
-      {dataset.warnings.length > 0 ? (
+      {warnings.length > 0 ? (
         <div className="warning-strip" role="status" aria-label="Dataset warnings">
-          {dataset.warnings.join(" ")}
+          {warnings.join(" ")}
         </div>
       ) : null}
       <div className="workbench-grid">

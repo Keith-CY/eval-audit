@@ -10,6 +10,14 @@ export type AnnotationMap = Record<string, Annotation>;
 
 const REVIEW_STATUS_SET = new Set<string>(REVIEW_STATUSES);
 
+function getLocalStorage(): Storage | null {
+  if (typeof localStorage === "undefined") {
+    return null;
+  }
+
+  return localStorage;
+}
+
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -36,10 +44,13 @@ export function annotationStorageKey(artifact: string): string {
 }
 
 export function loadAnnotations(artifact: string): AnnotationMap {
-  const raw = localStorage.getItem(annotationStorageKey(artifact));
-  if (!raw) return {};
-
   try {
+    const storage = getLocalStorage();
+    if (!storage) return {};
+
+    const raw = storage.getItem(annotationStorageKey(artifact));
+    if (!raw) return {};
+
     const parsed = JSON.parse(raw) as unknown;
     if (!isPlainRecord(parsed)) return {};
 
@@ -53,12 +64,28 @@ export function loadAnnotations(artifact: string): AnnotationMap {
   }
 }
 
-export function saveAnnotations(artifact: string, annotations: AnnotationMap): void {
-  localStorage.setItem(annotationStorageKey(artifact), JSON.stringify(annotations));
+export function saveAnnotations(artifact: string, annotations: AnnotationMap): boolean {
+  try {
+    const storage = getLocalStorage();
+    if (!storage) return false;
+
+    storage.setItem(annotationStorageKey(artifact), JSON.stringify(annotations));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
-export function clearAnnotations(artifact: string): void {
-  localStorage.removeItem(annotationStorageKey(artifact));
+export function clearAnnotations(artifact: string): boolean {
+  try {
+    const storage = getLocalStorage();
+    if (!storage) return false;
+
+    storage.removeItem(annotationStorageKey(artifact));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function getExportableAnnotations(annotations: AnnotationMap): Annotation[] {

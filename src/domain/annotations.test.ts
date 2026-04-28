@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { rowAuditsFixture } from "../test/fixtures";
 import {
   annotationStorageKey,
@@ -20,7 +20,10 @@ const annotation: Annotation = {
 };
 
 describe("annotations", () => {
-  beforeEach(() => localStorage.clear());
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    localStorage.clear();
+  });
 
   it("scopes localStorage keys by artifact", () => {
     expect(annotationStorageKey("google_gemma_4_31B_it")).toBe(
@@ -36,6 +39,14 @@ describe("annotations", () => {
 
   it("returns an empty map when stored JSON is invalid", () => {
     localStorage.setItem(annotationStorageKey("google_gemma_4_31B_it"), "{invalid");
+
+    expect(loadAnnotations("google_gemma_4_31B_it")).toEqual({});
+  });
+
+  it("returns an empty map when localStorage cannot be read", () => {
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("storage locked");
+    });
 
     expect(loadAnnotations("google_gemma_4_31B_it")).toEqual({});
   });
@@ -75,6 +86,18 @@ describe("annotations", () => {
     expect(loadAnnotations("other_artifact")).toEqual({
       "56": { ...annotation, artifact: "other_artifact" }
     });
+  });
+
+  it("reports failed saves and clears without throwing", () => {
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("quota exceeded");
+    });
+    vi.spyOn(Storage.prototype, "removeItem").mockImplementation(() => {
+      throw new Error("storage locked");
+    });
+
+    expect(saveAnnotations("google_gemma_4_31B_it", { "56": annotation })).toBe(false);
+    expect(clearAnnotations("google_gemma_4_31B_it")).toBe(false);
   });
 
   it("exports only changed annotations", () => {
