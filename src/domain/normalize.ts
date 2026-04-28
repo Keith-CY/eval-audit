@@ -27,6 +27,21 @@ function firstByDialogueId<T extends { dialogue_id: string }>(records: T[]): Map
   return map;
 }
 
+function groupByDialogueId<T extends { dialogue_id: string }>(records: T[]): Map<string, T[]> {
+  const map = new Map<string, T[]>();
+
+  for (const record of records) {
+    const existing = map.get(record.dialogue_id);
+    if (existing) {
+      existing.push(record);
+    } else {
+      map.set(record.dialogue_id, [record]);
+    }
+  }
+
+  return map;
+}
+
 function warningForMissing(count: number, singular: string, plural: string): string | null {
   if (count === 0) {
     return null;
@@ -37,26 +52,32 @@ function warningForMissing(count: number, singular: string, plural: string): str
 
 export function normalizeDataset(input: NormalizeInput): ReviewDataset {
   const predictionsByDialogue = firstByDialogueId(input.predictionRows);
+  const eventDetailsByDialogue = groupByDialogueId(input.eventDetails);
   const failuresByDialogue = firstByDialogueId(input.failures);
   const warnings: string[] = [];
 
   let auditsWithoutPredictions = 0;
 
-  const dialogues = input.rowAudits.map((rowAudit) => {
+  const auditedDialogues = input.rowAudits.map((rowAudit) => {
     const prediction = predictionsByDialogue.get(rowAudit.dialogue_id) ?? null;
     if (!prediction) {
       auditsWithoutPredictions += 1;
     }
 
+    const auditEvents = rowAudit.events ?? [];
+    const usedEvents =
+      auditEvents.length > 0 ? auditEvents : (eventDetailsByDialogue.get(rowAudit.dialogue_id) ?? []);
+    const normalizedRowAudit = usedEvents === auditEvents ? rowAudit : { ...rowAudit, events: usedEvents };
+
     return {
       row_index: rowAudit.row_index,
       dialogue_id: rowAudit.dialogue_id,
       dialogue: prediction?.dialogue ?? [],
-      goldEvents: rowAudit.events.flatMap((event) => (event.gold_event ? [event.gold_event] : [])),
+      goldEvents: usedEvents.flatMap((event) => (event.gold_event ? [event.gold_event] : [])),
       predEvents:
         prediction?.events ??
-        rowAudit.events.flatMap((event) => (event.pred_event ? [event.pred_event] : [])),
-      rowAudit,
+        usedEvents.flatMap((event) => (event.pred_event ? [event.pred_event] : [])),
+      rowAudit: normalizedRowAudit,
       failure: failuresByDialogue.get(rowAudit.dialogue_id) ?? null
     };
   });
@@ -71,9 +92,25 @@ export function normalizeDataset(input: NormalizeInput): ReviewDataset {
   }
 
   const auditIds = new Set(input.rowAudits.map((row) => row.dialogue_id));
-  const predictionsWithoutAudits = input.predictionRows.filter(
-    (row) => !auditIds.has(row.dialogue_id)
-  ).length;
+  const predictionOnlyDialogues = input.predictionRows.flatMap((prediction, predictionIndex) => {
+    if (auditIds.has(prediction.dialogue_id)) {
+      return [];
+    }
+
+    return [
+      {
+        row_index: predictionIndex,
+        dialogue_id: prediction.dialogue_id,
+        dialogue: prediction.dialogue,
+        goldEvents: [],
+        predEvents: prediction.events,
+        rowAudit: null,
+        failure: failuresByDialogue.get(prediction.dialogue_id) ?? null
+      }
+    ];
+  });
+
+  const predictionsWithoutAudits = predictionOnlyDialogues.length;
   const missingAuditWarning = warningForMissing(
     predictionsWithoutAudits,
     "prediction row has no matching row audit record.",
@@ -86,7 +123,7 @@ export function normalizeDataset(input: NormalizeInput): ReviewDataset {
   return {
     artifact: input.summary.artifact,
     summary: input.summary,
-    dialogues,
+    dialogues: [...auditedDialogues, ...predictionOnlyDialogues],
     warnings
   };
 }

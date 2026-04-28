@@ -63,4 +63,76 @@ describe("normalizeDataset", () => {
 
     expect(dataset.dialogues[0].predEvents).toEqual([predictedEvent]);
   });
+
+  it("preserves prediction-only rows after audited rows", () => {
+    const predictionOnlyEvent: ExtractedEvent = {
+      actor: ["speaker_2"],
+      time: ["9点"],
+      location: null,
+      action: ["出门"],
+      digest: "prediction-only-event"
+    };
+
+    const dataset = normalizeDataset({
+      summary: summaryFixture,
+      rowAudits: rowAuditsFixture,
+      eventDetails: rowAuditsFixture[0].events,
+      predictionRows: [
+        ...predictionRowsFixture,
+        {
+          dialogue_id: "57",
+          dialogue: ["speaker_2:我 9 点 出门"],
+          events: [predictionOnlyEvent]
+        }
+      ],
+      failures: [
+        ...failuresFixture,
+        {
+          dialogue_id: "57",
+          line_number: 2,
+          event_index: 0,
+          reason: "late prediction"
+        }
+      ]
+    });
+
+    expect(dataset.dialogues.map((dialogue) => dialogue.dialogue_id)).toEqual(["56", "57"]);
+    expect(dataset.dialogues[1]).toMatchObject({
+      row_index: 1,
+      dialogue_id: "57",
+      dialogue: ["speaker_2:我 9 点 出门"],
+      goldEvents: [],
+      predEvents: [predictionOnlyEvent],
+      rowAudit: null,
+      failure: { reason: "late prediction" }
+    });
+    expect(dataset.warnings).toContain("1 prediction row has no matching row audit record.");
+  });
+
+  it("uses event details when row audit events are empty", () => {
+    const supplementalEvent = {
+      ...rowAuditsFixture[0].events[0],
+      weighted_f1: 0.5,
+      pred_event: {
+        actor: ["speaker_1"],
+        time: ["8点"],
+        location: null,
+        action: ["起床"],
+        digest: "supplemental-prediction"
+      }
+    };
+    const auditWithoutEvents = { ...rowAuditsFixture[0], events: [] };
+
+    const dataset = normalizeDataset({
+      summary: summaryFixture,
+      rowAudits: [auditWithoutEvents],
+      eventDetails: [supplementalEvent],
+      predictionRows: [],
+      failures: []
+    });
+
+    expect(dataset.dialogues[0].rowAudit?.events).toEqual([supplementalEvent]);
+    expect(dataset.dialogues[0].goldEvents).toEqual([supplementalEvent.gold_event]);
+    expect(dataset.dialogues[0].predEvents).toEqual([supplementalEvent.pred_event]);
+  });
 });
