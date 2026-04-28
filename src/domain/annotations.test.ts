@@ -40,6 +40,29 @@ describe("annotations", () => {
     expect(loadAnnotations("google_gemma_4_31B_it")).toEqual({});
   });
 
+  it("returns an empty map when stored JSON is not an annotation record", () => {
+    localStorage.setItem(annotationStorageKey("null_artifact"), "null");
+    localStorage.setItem(annotationStorageKey("array_artifact"), JSON.stringify([annotation]));
+
+    expect(loadAnnotations("null_artifact")).toEqual({});
+    expect(loadAnnotations("array_artifact")).toEqual({});
+  });
+
+  it("drops invalid stored annotation entries while preserving valid entries", () => {
+    localStorage.setItem(
+      annotationStorageKey("google_gemma_4_31B_it"),
+      JSON.stringify({
+        "56": annotation,
+        bad_status: { ...annotation, dialogue_id: "57", review_status: "done" },
+        bad_note: { ...annotation, dialogue_id: "58", review_note: null },
+        bad_row: { ...annotation, dialogue_id: "59", row_index: "0" },
+        bad_entry: null
+      })
+    );
+
+    expect(loadAnnotations("google_gemma_4_31B_it")).toEqual({ "56": annotation });
+  });
+
   it("clears annotations for the current artifact", () => {
     saveAnnotations("google_gemma_4_31B_it", { "56": annotation });
     saveAnnotations("other_artifact", {
@@ -65,6 +88,28 @@ describe("annotations", () => {
     expect(getExportableAnnotations({ "56": annotation, "57": untouched })).toEqual([
       annotation
     ]);
+  });
+
+  it("does not export unreviewed annotations with whitespace-only notes", () => {
+    expect(
+      getExportableAnnotations({
+        "56": { ...annotation, review_status: "unreviewed", review_note: "   " }
+      })
+    ).toEqual([]);
+  });
+
+  it("sorts exportable annotations by row index then dialogue id", () => {
+    const row10: Annotation = { ...annotation, dialogue_id: "2", row_index: 10 };
+    const row2b: Annotation = { ...annotation, dialogue_id: "b", row_index: 2 };
+    const row2a: Annotation = { ...annotation, dialogue_id: "a", row_index: 2 };
+
+    expect(
+      getExportableAnnotations({
+        "2": row10,
+        b: row2b,
+        a: row2a
+      })
+    ).toEqual([row2a, row2b, row10]);
   });
 
   it("adds row context and exported_at to JSONL export", () => {

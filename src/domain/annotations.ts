@@ -1,7 +1,35 @@
 import { stringifyJsonl } from "./jsonl";
-import type { Annotation, RowAudit } from "./types";
+import {
+  REVIEW_STATUSES,
+  type Annotation,
+  type ReviewStatus,
+  type RowAudit
+} from "./types";
 
 export type AnnotationMap = Record<string, Annotation>;
+
+const REVIEW_STATUS_SET = new Set<string>(REVIEW_STATUSES);
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isReviewStatus(value: unknown): value is ReviewStatus {
+  return typeof value === "string" && REVIEW_STATUS_SET.has(value);
+}
+
+function isAnnotation(value: unknown): value is Annotation {
+  if (!isPlainRecord(value)) return false;
+
+  return (
+    typeof value.artifact === "string" &&
+    typeof value.dialogue_id === "string" &&
+    typeof value.row_index === "number" &&
+    isReviewStatus(value.review_status) &&
+    typeof value.review_note === "string" &&
+    typeof value.updated_at === "string"
+  );
+}
 
 export function annotationStorageKey(artifact: string): string {
   return `evaluation-review:${artifact}:annotations`;
@@ -12,7 +40,14 @@ export function loadAnnotations(artifact: string): AnnotationMap {
   if (!raw) return {};
 
   try {
-    return JSON.parse(raw) as AnnotationMap;
+    const parsed = JSON.parse(raw) as unknown;
+    if (!isPlainRecord(parsed)) return {};
+
+    return Object.fromEntries(
+      Object.entries(parsed).filter((entry): entry is [string, Annotation] =>
+        isAnnotation(entry[1])
+      )
+    );
   } catch {
     return {};
   }
@@ -31,7 +66,14 @@ export function getExportableAnnotations(annotations: AnnotationMap): Annotation
     (annotation) =>
       annotation.review_status !== "unreviewed" ||
       annotation.review_note.trim().length > 0
-  );
+  ).sort((left, right) => {
+    const rowIndexDifference = left.row_index - right.row_index;
+    if (rowIndexDifference !== 0) return rowIndexDifference;
+
+    if (left.dialogue_id < right.dialogue_id) return -1;
+    if (left.dialogue_id > right.dialogue_id) return 1;
+    return 0;
+  });
 }
 
 export interface ExportAnnotationsInput {
