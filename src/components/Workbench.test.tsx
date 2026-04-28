@@ -1,6 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
+import { annotationStorageKey } from "../domain/annotations";
 import { normalizeDataset } from "../domain/normalize";
 import type { DialogueReview, ReviewDataset, RowAudit } from "../domain/types";
 import {
@@ -134,5 +135,61 @@ describe("Workbench", () => {
 
     const warningStrip = screen.getByRole("status", { name: "Dataset warnings" });
     expect(warningStrip).toHaveTextContent("Optional failures file was skipped.");
+  });
+
+  it("reloads artifact-scoped annotations when the dataset changes", () => {
+    const firstDataset = dataset();
+    const secondDialogue = fullyMatchedDialogue();
+    const secondDataset = dataset({
+      artifact: "second_artifact",
+      summary: { ...summaryFixture, artifact: "second_artifact" },
+      dialogues: [secondDialogue]
+    });
+
+    localStorage.setItem(
+      annotationStorageKey("second_artifact"),
+      JSON.stringify({
+        [secondDialogue.dialogue_id]: {
+          artifact: "second_artifact",
+          dialogue_id: secondDialogue.dialogue_id,
+          row_index: secondDialogue.row_index,
+          review_status: "accepted",
+          review_note: "already checked",
+          updated_at: "2026-04-29T00:00:00.000Z"
+        }
+      })
+    );
+
+    const { rerender } = render(<Workbench dataset={firstDataset} />);
+    expect(screen.getByLabelText("Review status")).toHaveValue("unreviewed");
+
+    rerender(<Workbench dataset={secondDataset} />);
+
+    expect(screen.getByRole("heading", { name: "Dialogue 57" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Review status")).toHaveValue("accepted");
+    expect(screen.getByLabelText("Review note")).toHaveValue("already checked");
+  });
+
+  it("renders event rows with missing field comparisons without crashing", () => {
+    const base = dataset();
+    const dialogue = base.dialogues[0];
+    const rowAudit = dialogue.rowAudit as RowAudit;
+    const incompleteDialogue: DialogueReview = {
+      ...dialogue,
+      rowAudit: {
+        ...rowAudit,
+        events: [
+          {
+            ...rowAudit.events[0],
+            fields: {}
+          } as RowAudit["events"][number]
+        ]
+      }
+    };
+
+    render(<Workbench dataset={{ ...base, dialogues: [incompleteDialogue] }} />);
+
+    expect(screen.getByText("speaker_1:我 8 点 起床")).toBeInTheDocument();
+    expect(screen.getAllByText("TP 0 / FP 0 / FN 0 / F1 -")).toHaveLength(4);
   });
 });

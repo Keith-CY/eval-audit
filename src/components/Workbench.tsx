@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   clearAnnotations,
   exportAnnotations,
@@ -54,6 +54,14 @@ export function Workbench({ dataset }: WorkbenchProps) {
   const [search, setSearch] = useState("");
   const [reviewStatus, setReviewStatus] = useState<ReviewStatusFilter>("all");
   const [evaluationStatus, setEvaluationStatus] = useState<EvaluationStatusFilter>("all");
+
+  useEffect(() => {
+    setAnnotations(loadAnnotations(dataset.artifact));
+    setActiveDialogueId(dataset.dialogues[0]?.dialogue_id ?? null);
+    setSearch("");
+    setReviewStatus("all");
+    setEvaluationStatus("all");
+  }, [dataset]);
 
   const filteredDialogues = useMemo(
     () =>

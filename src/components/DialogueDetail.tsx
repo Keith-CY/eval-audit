@@ -1,5 +1,10 @@
 import { formatOptionalMetric } from "../domain/format";
-import type { DialogueReview, EventComparison, FieldName } from "../domain/types";
+import type {
+  DialogueReview,
+  EventComparison,
+  FieldComparison,
+  FieldName
+} from "../domain/types";
 
 interface DialogueDetailProps {
   dialogue: DialogueReview | null;
@@ -10,17 +15,29 @@ interface DialogueDetailProps {
 }
 
 const fields: FieldName[] = ["actor", "time", "location", "action"];
+const emptyFieldComparison: FieldComparison = {
+  gold: [],
+  pred: [],
+  TP: 0,
+  FP: 0,
+  FN: 0,
+  precision: null,
+  recall: null,
+  f1: null
+};
 
-function values(valuesToRender: string[]): string {
-  return valuesToRender.length > 0 ? valuesToRender.join(", ") : "-";
+function values(valuesToRender: string[] | null | undefined): string {
+  return Array.isArray(valuesToRender) && valuesToRender.length > 0
+    ? valuesToRender.join(", ")
+    : "-";
 }
 
 function EventComparisonCard({ event }: { event: EventComparison }) {
   return (
     <article className="event-card">
       <div className="event-card-header">
-        <strong>{event.match_status}</strong>
-        <span>F1 {formatOptionalMetric(event.weighted_f1)}</span>
+        <strong>{event.match_status ?? "unknown"}</strong>
+        <span>F1 {formatOptionalMetric(event.weighted_f1 ?? null)}</span>
       </div>
       <div className="event-pair">
         <div>
@@ -34,15 +51,15 @@ function EventComparisonCard({ event }: { event: EventComparison }) {
       </div>
       <div className="field-grid">
         {fields.map((field) => {
-          const comparison = event.fields[field];
+          const comparison = event.fields?.[field] ?? emptyFieldComparison;
           return (
             <div className="field-row" key={field}>
               <strong>{field}</strong>
               <span>gold: {values(comparison.gold)}</span>
               <span>pred: {values(comparison.pred)}</span>
               <span>
-                TP {comparison.TP} / FP {comparison.FP} / FN {comparison.FN} / F1{" "}
-                {formatOptionalMetric(comparison.f1)}
+                TP {comparison.TP ?? 0} / FP {comparison.FP ?? 0} / FN {comparison.FN ?? 0} / F1{" "}
+                {formatOptionalMetric(comparison.f1 ?? null)}
               </span>
             </div>
           );
