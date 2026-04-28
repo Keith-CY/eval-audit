@@ -21,6 +21,7 @@
 - Create `src/App.tsx`: top-level app state, upload flow, active dialogue selection.
 - Create `src/styles.css`: full workbench styling.
 - Create `src/test/setup.ts`: Testing Library matcher setup.
+- Create `src/vite-env.d.ts`: Vite client type declarations for CSS imports.
 - Create `src/domain/types.ts`: shared data types and status constants.
 - Create `src/domain/jsonl.ts`: line-numbered JSONL parsing and serialization helpers.
 - Create `src/domain/jsonl.test.ts`: JSONL parser tests.
@@ -57,6 +58,7 @@
 - Create: `src/App.tsx`
 - Create: `src/styles.css`
 - Create: `src/test/setup.ts`
+- Create: `src/vite-env.d.ts`
 
 - [ ] **Step 1: Create package manifest**
 
@@ -70,7 +72,7 @@ Create `package.json` with Bun-friendly scripts:
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json && vite build",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest"
@@ -87,6 +89,7 @@ Create `package.json` with Bun-friendly scripts:
     "@testing-library/jest-dom": "*",
     "@testing-library/react": "*",
     "@testing-library/user-event": "*",
+    "@types/node": "*",
     "@types/react": "*",
     "@types/react-dom": "*",
     "jsdom": "*",
@@ -100,7 +103,7 @@ Create `package.json` with Bun-friendly scripts:
 
 Run: `bun install`
 
-Expected: Bun creates `bun.lock`, installs React, Vite, JSZip, Vitest, and Testing Library without errors.
+Expected: Bun creates `bun.lockb`, installs React, Vite, JSZip, Vitest, and Testing Library without errors.
 
 - [ ] **Step 3: Create TypeScript and Vite config**
 
@@ -111,7 +114,7 @@ Create `tsconfig.json`:
   "compilerOptions": {
     "target": "ES2022",
     "useDefineForClassFields": true,
-    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
     "allowJs": false,
     "skipLibCheck": true,
     "esModuleInterop": true,
@@ -119,14 +122,13 @@ Create `tsconfig.json`:
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "module": "ESNext",
-    "moduleResolution": "Node",
+    "moduleResolution": "Bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx"
   },
-  "include": ["src"],
-  "references": [{ "path": "./tsconfig.node.json" }]
+  "include": ["src"]
 }
 ```
 
@@ -135,11 +137,13 @@ Create `tsconfig.node.json`:
 ```json
 {
   "compilerOptions": {
-    "composite": true,
     "module": "ESNext",
-    "moduleResolution": "Node",
+    "moduleResolution": "Bundler",
     "allowSyntheticDefaultImports": true,
-    "strict": true
+    "strict": true,
+    "types": ["node"],
+    "lib": ["ESNext"],
+    "noEmit": true
   },
   "include": ["vite.config.ts"]
 }
@@ -167,6 +171,12 @@ Create `src/test/setup.ts`:
 
 ```ts
 import "@testing-library/jest-dom/vitest";
+```
+
+Create `src/vite-env.d.ts`:
+
+```ts
+/// <reference types="vite/client" />
 ```
 
 Create `index.html`:
@@ -250,7 +260,7 @@ textarea {
 
 - [ ] **Step 5: Verify scaffold**
 
-Run: `bun test`
+Run: `bun run test -- --passWithNoTests`
 
 Expected: Vitest starts and reports no test files or zero tests without TypeScript errors.
 
@@ -263,7 +273,7 @@ Expected: TypeScript and Vite build complete and create `dist/`.
 Run:
 
 ```bash
-git add package.json bun.lock index.html tsconfig.json tsconfig.node.json vite.config.ts src/test/setup.ts src/main.tsx src/App.tsx src/styles.css
+git add package.json bun.lockb index.html tsconfig.json tsconfig.node.json vite.config.ts src/test/setup.ts src/vite-env.d.ts src/main.tsx src/App.tsx src/styles.css
 git commit -m "chore: scaffold evaluation review app"
 ```
 
@@ -308,7 +318,7 @@ describe("stringifyJsonl", () => {
 
 - [ ] **Step 2: Run JSONL tests to verify they fail**
 
-Run: `bun test src/domain/jsonl.test.ts`
+Run: `bun run test src/domain/jsonl.test.ts`
 
 Expected: FAIL because `src/domain/jsonl.ts` does not exist.
 
@@ -473,7 +483,7 @@ export function stringifyJsonl(records: unknown[]): string {
 
 - [ ] **Step 4: Run JSONL tests to verify they pass**
 
-Run: `bun test src/domain/jsonl.test.ts`
+Run: `bun run test src/domain/jsonl.test.ts`
 
 Expected: PASS.
 
@@ -518,7 +528,7 @@ describe("classifyZipEntries", () => {
 
 - [ ] **Step 6: Run file discovery tests to verify they fail**
 
-Run: `bun test src/domain/fileDiscovery.test.ts`
+Run: `bun run test src/domain/fileDiscovery.test.ts`
 
 Expected: FAIL because `src/domain/fileDiscovery.ts` does not exist.
 
@@ -575,7 +585,7 @@ export function classifyZipEntries(paths: string[]): ClassifiedEntries {
 
 - [ ] **Step 8: Run discovery tests to verify they pass**
 
-Run: `bun test src/domain/fileDiscovery.test.ts src/domain/jsonl.test.ts`
+Run: `bun run test src/domain/fileDiscovery.test.ts src/domain/jsonl.test.ts`
 
 Expected: PASS.
 
@@ -754,7 +764,7 @@ describe("normalizeDataset", () => {
 
 - [ ] **Step 3: Run normalization tests to verify they fail**
 
-Run: `bun test src/domain/normalize.test.ts`
+Run: `bun run test src/domain/normalize.test.ts`
 
 Expected: FAIL because `src/domain/normalize.ts` does not exist.
 
@@ -846,7 +856,7 @@ export function normalizeDataset(input: NormalizeInput): ReviewDataset {
 
 - [ ] **Step 5: Run normalization tests to verify they pass**
 
-Run: `bun test src/domain/normalize.test.ts`
+Run: `bun run test src/domain/normalize.test.ts`
 
 Expected: PASS.
 
@@ -939,7 +949,7 @@ describe("annotations", () => {
 
 - [ ] **Step 2: Run annotation tests to verify they fail**
 
-Run: `bun test src/domain/annotations.test.ts`
+Run: `bun run test src/domain/annotations.test.ts`
 
 Expected: FAIL because `src/domain/annotations.ts` does not exist.
 
@@ -1012,7 +1022,7 @@ export function exportAnnotations(input: ExportAnnotationsInput): string {
 
 - [ ] **Step 4: Run annotation tests to verify they pass**
 
-Run: `bun test src/domain/annotations.test.ts`
+Run: `bun run test src/domain/annotations.test.ts`
 
 Expected: PASS.
 
@@ -1091,7 +1101,7 @@ describe("metric formatting", () => {
 
 - [ ] **Step 6: Run filter and format tests to verify they fail**
 
-Run: `bun test src/domain/filters.test.ts src/domain/format.test.ts`
+Run: `bun run test src/domain/filters.test.ts src/domain/format.test.ts`
 
 Expected: FAIL because `filters.ts` and `format.ts` do not exist.
 
@@ -1170,7 +1180,7 @@ export function formatCount(value: number | null | undefined): string {
 
 - [ ] **Step 8: Run all domain tests**
 
-Run: `bun test src/domain`
+Run: `bun run test src/domain`
 
 Expected: PASS.
 
@@ -1257,7 +1267,7 @@ describe("loadEvaluationZip", () => {
 
 - [ ] **Step 2: Run zip loading tests to verify they fail**
 
-Run: `bun test src/domain/loadEvaluationZip.test.ts`
+Run: `bun run test src/domain/loadEvaluationZip.test.ts`
 
 Expected: FAIL because `src/domain/loadEvaluationZip.ts` does not exist.
 
@@ -1320,13 +1330,13 @@ export async function loadEvaluationZip(file: File): Promise<ReviewDataset> {
 
 - [ ] **Step 4: Run zip loading tests to verify they pass**
 
-Run: `bun test src/domain/loadEvaluationZip.test.ts`
+Run: `bun run test src/domain/loadEvaluationZip.test.ts`
 
 Expected: PASS.
 
 - [ ] **Step 5: Run full test suite and commit**
 
-Run: `bun test`
+Run: `bun run test`
 
 Expected: PASS.
 
@@ -1386,7 +1396,7 @@ describe("App", () => {
 
 - [ ] **Step 2: Run app test to verify it fails**
 
-Run: `bun test src/App.test.tsx`
+Run: `bun run test src/App.test.tsx`
 
 Expected: FAIL because upload UI and workbench components do not exist.
 
@@ -1508,7 +1518,7 @@ export default function App() {
 
 - [ ] **Step 6: Run app interaction test**
 
-Run: `bun test src/App.test.tsx`
+Run: `bun run test src/App.test.tsx`
 
 Expected: PASS.
 
@@ -1584,7 +1594,7 @@ describe("Workbench", () => {
 
 - [ ] **Step 2: Run workbench tests to verify they fail**
 
-Run: `bun test src/components/Workbench.test.tsx`
+Run: `bun run test src/components/Workbench.test.tsx`
 
 Expected: FAIL because detailed components are not implemented.
 
@@ -2349,7 +2359,7 @@ button:disabled {
 
 - [ ] **Step 9: Run workbench tests**
 
-Run: `bun test src/components/Workbench.test.tsx src/App.test.tsx`
+Run: `bun run test src/components/Workbench.test.tsx src/App.test.tsx`
 
 Expected: PASS.
 
@@ -2390,7 +2400,7 @@ bun install
 Run tests:
 
 ```bash
-bun test
+bun run test
 ```
 
 Run the site:
@@ -2426,7 +2436,7 @@ Use Vercel's static frontend defaults:
 
 - [ ] **Step 2: Run full verification**
 
-Run: `bun test`
+Run: `bun run test`
 
 Expected: PASS.
 
@@ -2470,7 +2480,7 @@ If `src/styles.css` did not change in this task, commit only `README.md`.
 
 ## Final Verification
 
-- [ ] Run `bun test`; expected PASS.
+- [ ] Run `bun run test`; expected PASS.
 - [ ] Run `bun run build`; expected PASS.
 - [ ] Run browser verification with the sample zip; expected upload, dashboard, dialogue detail, annotation persistence, and JSONL export all work.
 - [ ] Run `git status --short`; expected no unstaged tracked changes.
