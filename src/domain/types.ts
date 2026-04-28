@@ -9,6 +9,8 @@ export const REVIEW_STATUSES: ReviewStatus[] = [
 
 export type FieldName = "actor" | "time" | "location" | "action";
 
+export type KnownMatchStatus = "matched" | "unmatched_gold" | "unmatched_prediction";
+
 export interface ExtractedEvent {
   actor?: string[] | null;
   time?: string[] | null;
@@ -42,7 +44,7 @@ export interface EventComparison {
   artifact: string;
   dialogue_id: string;
   row_index: number;
-  match_status: "matched" | "unmatched_gold" | "unmatched_prediction" | string;
+  match_status: KnownMatchStatus | (string & {});
   gold_event_index: number | null;
   pred_event_index: number | null;
   alignment_score: number;

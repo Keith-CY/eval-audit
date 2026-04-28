@@ -15,5 +15,9 @@ export function parseJsonl<T>(text: string, sourceName: string): T[] {
 }
 
 export function stringifyJsonl(records: unknown[]): string {
+  if (records.length === 0) {
+    return "";
+  }
+
   return records.map((record) => JSON.stringify(record)).join("\n") + "\n";
 }

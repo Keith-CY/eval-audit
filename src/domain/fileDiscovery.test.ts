@@ -29,4 +29,31 @@ describe("classifyZipEntries", () => {
       "prediction jsonl"
     ]);
   });
+
+  it("prefers prediction candidates from the inferred artifact directory", () => {
+    const entries = classifyZipEntries([
+      "other/aaa-unrelated.jsonl",
+      "artifact/event_eval_summary.json",
+      "artifact/row_audit_report.jsonl",
+      "artifact/event_eval_details.jsonl",
+      "artifact/model-output.jsonl"
+    ]);
+
+    expect(entries.predictions).toBe("artifact/model-output.jsonl");
+  });
+
+  it("excludes metadata and annotation JSONL files and sorts remaining candidates", () => {
+    const entries = classifyZipEntries([
+      "artifact/event_eval_summary.json",
+      "artifact/row_audit_report.jsonl",
+      "artifact/event_eval_details.jsonl",
+      "artifact/metadata.jsonl",
+      "artifact/annotations.jsonl",
+      "artifact/model-annotations.jsonl",
+      "artifact/z-model.jsonl",
+      "artifact/a-model.jsonl"
+    ]);
+
+    expect(entries.predictions).toBe("artifact/a-model.jsonl");
+  });
 });

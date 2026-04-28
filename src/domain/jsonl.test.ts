@@ -18,4 +18,8 @@ describe("stringifyJsonl", () => {
   it("serializes each record on its own line and ends with a newline", () => {
     expect(stringifyJsonl([{ id: "a" }, { id: "b" }])).toBe('{"id":"a"}\n{"id":"b"}\n');
   });
+
+  it("serializes empty records to an empty string", () => {
+    expect(stringifyJsonl([])).toBe("");
+  });
 });
