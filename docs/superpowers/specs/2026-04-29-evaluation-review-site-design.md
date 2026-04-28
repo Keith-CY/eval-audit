@@ -35,7 +35,7 @@ The application expects the uploaded zip to contain these logical files, possibl
 - `event_eval_summary.json`: overall metrics, field metrics, row counts, alignment settings, and artifact name.
 - `row_audit_report.jsonl`: one row per dialogue with row counts and event match details.
 - `event_eval_details.jsonl`: event-level audit records. This can be used as a supplemental detail source and consistency check.
-- A prediction JSONL file such as `google_gemma-4-31B-it.jsonl`: dialogue text, gold events, and predicted events.
+- A prediction JSONL file such as `google_gemma-4-31B-it.jsonl`: dialogue text and predicted events.
 - An optional failures JSONL file such as `google_gemma-4-31B-it.failures.jsonl`: extraction or provider failures.
 - Optional CSV files are ignored in the first version because their data is already available in JSON/JSONL files.
 
@@ -49,7 +49,7 @@ The app identifies files by basename and suffix rather than by a fixed top-level
 4. JSONL files are parsed line by line, preserving file name and line number for error messages.
 5. Dialogue records are joined by `dialogue_id` and `row_index`:
    - row audit data provides counts and event-level comparison details;
-   - prediction data provides dialogue text, gold events, and predicted events;
+   - prediction data provides dialogue text and predicted events;
    - summary data provides global metrics;
    - failures data marks affected dialogues.
 6. The normalized in-memory model powers the dashboard, list filters, detail view, and annotation state.
@@ -171,4 +171,3 @@ Manual visual checks:
 ## Implementation Direction
 
 Use a small Vite frontend with Bun for local package operations. The production output is static files that can be deployed directly to Vercel. Keep parsing, normalization, storage, and export logic in small testable modules, with React components focused on rendering and interaction.
-
