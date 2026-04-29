@@ -64,15 +64,15 @@ function twoDialogueDataset(): ReviewDataset {
 }
 
 function reviewNoteColumn() {
-  return screen.getByRole("complementary", { name: "Review note" });
+  return screen.getByRole("complementary", { name: "Review controls" });
 }
 
 function reviewStatusControl() {
   return within(reviewNoteColumn()).getByLabelText("Review status");
 }
 
-function reviewNoteControl() {
-  return within(reviewNoteColumn()).getByLabelText("Review note");
+function eventNoteControl(index = 1) {
+  return screen.getByLabelText(`Event ${index} note`);
 }
 
 describe("Workbench", () => {
@@ -90,29 +90,31 @@ describe("Workbench", () => {
     expect(screen.getByText("remote provider HTTP 504")).toBeInTheDocument();
   });
 
-  it("renders review note as the third workbench column", () => {
+  it("renders one event note editor per event and review controls in the third column", () => {
     render(<Workbench dataset={dataset()} />);
 
     const currentDialogue = screen.getByRole("region", { name: "Current dialogue" });
-    const reviewNote = screen.getByRole("complementary", { name: "Review note" });
+    const reviewControls = screen.getByRole("complementary", { name: "Review controls" });
 
     expect(screen.getByRole("complementary", { name: "Dialogue list" })).toBeInTheDocument();
     expect(currentDialogue).toBeInTheDocument();
-    expect(reviewNote).toBeInTheDocument();
-    expect(within(reviewNote).getByLabelText("Review status")).toBeInTheDocument();
-    expect(within(reviewNote).getByLabelText("Review note")).toBeInTheDocument();
+    expect(reviewControls).toBeInTheDocument();
+    expect(within(reviewControls).getByLabelText("Review status")).toBeInTheDocument();
     expect(
-      within(reviewNote).getByRole("button", { name: /Save current/i })
+      within(reviewControls).getByRole("button", { name: /Save current/i })
     ).toBeInTheDocument();
-    expect(within(reviewNote).getByRole("button", { name: /Export JSONL/i })).toBeInTheDocument();
-    expect(within(currentDialogue).queryByLabelText("Review note")).not.toBeInTheDocument();
+    expect(
+      within(reviewControls).getByRole("button", { name: /Export JSONL/i })
+    ).toBeInTheDocument();
+    expect(within(reviewControls).queryByLabelText("Review note")).not.toBeInTheDocument();
+    expect(within(currentDialogue).getByLabelText("Event 1 note")).toBeInTheDocument();
   });
 
   it("saves a dialogue annotation and counts it as exportable", async () => {
     render(<Workbench dataset={dataset()} />);
 
     await userEvent.selectOptions(reviewStatusControl(), "has_issue");
-    await userEvent.type(reviewNoteControl(), "需要复核");
+    await userEvent.type(eventNoteControl(), "需要复核");
 
     expect(screen.getByText("Exportable annotations: 1")).toBeInTheDocument();
   });
@@ -137,7 +139,7 @@ describe("Workbench", () => {
     const exportButton = screen.getByRole("button", { name: /Export JSONL/i });
     expect(exportButton).toBeDisabled();
 
-    await userEvent.type(reviewNoteControl(), "note only");
+    await userEvent.type(eventNoteControl(), "note only");
 
     expect(screen.getByText("Exportable annotations: 1")).toBeInTheDocument();
     expect(exportButton).toBeEnabled();
@@ -147,13 +149,13 @@ describe("Workbench", () => {
     render(<Workbench dataset={dataset()} />);
 
     await userEvent.selectOptions(reviewStatusControl(), "has_issue");
-    await userEvent.type(reviewNoteControl(), "needs review");
+    await userEvent.type(eventNoteControl(), "needs review");
     expect(screen.getByText("Exportable annotations: 1")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: /Clear current/i }));
 
     expect(reviewStatusControl()).toHaveValue("unreviewed");
-    expect(reviewNoteControl()).toHaveValue("");
+    expect(eventNoteControl()).toHaveValue("");
     expect(screen.getByText("Exportable annotations: 0")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Export JSONL/i })).toBeDisabled();
   });
@@ -201,7 +203,17 @@ describe("Workbench", () => {
           dialogue_id: secondDialogue.dialogue_id,
           row_index: secondDialogue.row_index,
           review_status: "accepted",
-          review_note: "already checked",
+          review_note: "",
+          event_notes: [
+            {
+              event_key: "matched:0:none:0",
+              event_index: 0,
+              match_status: "matched",
+              gold_event_index: 0,
+              pred_event_index: null,
+              note: "already checked"
+            }
+          ],
           updated_at: "2026-04-29T00:00:00.000Z"
         }
       })
@@ -214,7 +226,7 @@ describe("Workbench", () => {
 
     expect(screen.getByRole("heading", { name: "Dialogue 57" })).toBeInTheDocument();
     expect(reviewStatusControl()).toHaveValue("accepted");
-    expect(reviewNoteControl()).toHaveValue("already checked");
+    expect(eventNoteControl()).toHaveValue("already checked");
   });
 
   it("renders event rows with missing field comparisons without crashing", () => {

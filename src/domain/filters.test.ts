@@ -54,6 +54,7 @@ describe("filterDialogues", () => {
             row_index: 0,
             review_status: "accepted",
             review_note: "",
+            event_notes: [],
             updated_at: "now"
           }
         },

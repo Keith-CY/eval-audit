@@ -12,7 +12,14 @@ import {
   type EvaluationStatusFilter,
   type ReviewStatusFilter
 } from "../domain/filters";
-import type { Annotation, ReviewDataset, ReviewStatus, RowAudit } from "../domain/types";
+import { upsertEventNote } from "../domain/eventNotes";
+import type {
+  Annotation,
+  EventComparison,
+  ReviewDataset,
+  ReviewStatus,
+  RowAudit
+} from "../domain/types";
 import { AnnotationPanel } from "./AnnotationPanel";
 import { DialogueDetail } from "./DialogueDetail";
 import { DialogueList } from "./DialogueList";
@@ -101,6 +108,7 @@ export function Workbench({ dataset }: WorkbenchProps) {
         row_index: activeDialogue.row_index,
         review_status: "unreviewed" as ReviewStatus,
         review_note: "",
+        event_notes: [],
         updated_at: ""
       }
     : null;
@@ -119,11 +127,22 @@ export function Workbench({ dataset }: WorkbenchProps) {
 
     const updated: Annotation = {
       ...activeAnnotation,
+      event_notes: activeAnnotation.event_notes ?? [],
       ...next,
       updated_at: new Date().toISOString()
     };
     const nextAnnotations = { ...annotations, [activeDialogue.dialogue_id]: updated };
     persistAnnotations(nextAnnotations);
+  }
+
+  function updateActiveEventNote(event: EventComparison, eventIndex: number, note: string) {
+    if (!activeAnnotation) {
+      return;
+    }
+
+    updateActiveAnnotation({
+      event_notes: upsertEventNote(activeAnnotation.event_notes ?? [], event, eventIndex, note)
+    });
   }
 
   function clearCurrent() {
@@ -193,6 +212,8 @@ export function Workbench({ dataset }: WorkbenchProps) {
             dialogue={activeDialogue}
             canGoPrevious={activeIndex > 0}
             canGoNext={activeIndex >= 0 && activeIndex < filteredDialogues.length - 1}
+            eventNotes={activeAnnotation?.event_notes ?? []}
+            onEventNoteChange={updateActiveEventNote}
             onPrevious={() => {
               const previous = filteredDialogues[activeIndex - 1];
               if (previous) {
@@ -209,11 +230,9 @@ export function Workbench({ dataset }: WorkbenchProps) {
         </div>
         <AnnotationPanel
           status={activeAnnotation?.review_status ?? "unreviewed"}
-          note={activeAnnotation?.review_note ?? ""}
           exportableCount={exportableCount}
           disabled={!activeDialogue}
           onStatusChange={(status) => updateActiveAnnotation({ review_status: status })}
-          onNoteChange={(note) => updateActiveAnnotation({ review_note: note })}
           onSave={() => updateActiveAnnotation({})}
           onClearCurrent={clearCurrent}
           onClearAll={clearAll}

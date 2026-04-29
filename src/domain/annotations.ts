@@ -2,6 +2,7 @@ import { stringifyJsonl } from "./jsonl";
 import {
   REVIEW_STATUSES,
   type Annotation,
+  type EventNote,
   type ReviewStatus,
   type RowAudit
 } from "./types";
@@ -26,17 +27,56 @@ function isReviewStatus(value: unknown): value is ReviewStatus {
   return typeof value === "string" && REVIEW_STATUS_SET.has(value);
 }
 
-function isAnnotation(value: unknown): value is Annotation {
+function isNullableNumber(value: unknown): value is number | null {
+  return value === null || typeof value === "number";
+}
+
+function isEventNote(value: unknown): value is EventNote {
   if (!isPlainRecord(value)) return false;
 
   return (
+    typeof value.event_key === "string" &&
+    typeof value.event_index === "number" &&
+    typeof value.match_status === "string" &&
+    isNullableNumber(value.gold_event_index) &&
+    isNullableNumber(value.pred_event_index) &&
+    typeof value.note === "string"
+  );
+}
+
+function normalizeAnnotation(value: unknown): Annotation | null {
+  if (!isPlainRecord(value)) return null;
+
+  const eventNotes = value.event_notes;
+  const normalizedEventNotes =
+    eventNotes === undefined
+      ? []
+      : Array.isArray(eventNotes) && eventNotes.every(isEventNote)
+        ? eventNotes
+        : null;
+
+  if (!normalizedEventNotes) return null;
+
+  if (
     typeof value.artifact === "string" &&
     typeof value.dialogue_id === "string" &&
     typeof value.row_index === "number" &&
     isReviewStatus(value.review_status) &&
     typeof value.review_note === "string" &&
     typeof value.updated_at === "string"
-  );
+  ) {
+    return {
+      artifact: value.artifact,
+      dialogue_id: value.dialogue_id,
+      row_index: value.row_index,
+      review_status: value.review_status,
+      review_note: value.review_note,
+      event_notes: normalizedEventNotes,
+      updated_at: value.updated_at
+    };
+  }
+
+  return null;
 }
 
 export function annotationStorageKey(artifact: string): string {
@@ -55,9 +95,10 @@ export function loadAnnotations(artifact: string): AnnotationMap {
     if (!isPlainRecord(parsed)) return {};
 
     return Object.fromEntries(
-      Object.entries(parsed).filter((entry): entry is [string, Annotation] =>
-        isAnnotation(entry[1])
-      )
+      Object.entries(parsed).flatMap(([key, value]) => {
+        const annotation = normalizeAnnotation(value);
+        return annotation ? [[key, annotation]] : [];
+      })
     );
   } catch {
     return {};
@@ -92,7 +133,8 @@ export function getExportableAnnotations(annotations: AnnotationMap): Annotation
   return Object.values(annotations).filter(
     (annotation) =>
       annotation.review_status !== "unreviewed" ||
-      annotation.review_note.trim().length > 0
+      annotation.review_note.trim().length > 0 ||
+      exportableEventNotes(annotation).length > 0
   ).sort((left, right) => {
     const rowIndexDifference = left.row_index - right.row_index;
     if (rowIndexDifference !== 0) return rowIndexDifference;
@@ -101,6 +143,10 @@ export function getExportableAnnotations(annotations: AnnotationMap): Annotation
     if (left.dialogue_id > right.dialogue_id) return 1;
     return 0;
   });
+}
+
+function exportableEventNotes(annotation: Annotation): EventNote[] {
+  return (annotation.event_notes ?? []).filter((eventNote) => eventNote.note.trim().length > 0);
 }
 
 export interface ExportAnnotationsInput {
@@ -119,6 +165,7 @@ export function exportAnnotations(input: ExportAnnotationsInput): string {
       row_index: annotation.row_index,
       review_status: annotation.review_status,
       review_note: annotation.review_note,
+      event_notes: exportableEventNotes(annotation),
       gold_event_count: row?.gold_event_count ?? null,
       pred_event_count: row?.pred_event_count ?? null,
       matched_events: row?.matched_events ?? null,

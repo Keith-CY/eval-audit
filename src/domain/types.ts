@@ -103,12 +103,22 @@ export interface FailureRecord {
   reason: string;
 }
 
+export interface EventNote {
+  event_key: string;
+  event_index: number;
+  match_status: string;
+  gold_event_index: number | null;
+  pred_event_index: number | null;
+  note: string;
+}
+
 export interface Annotation {
   artifact: string;
   dialogue_id: string;
   row_index: number;
   review_status: ReviewStatus;
   review_note: string;
+  event_notes: EventNote[];
   updated_at: string;
 }
 

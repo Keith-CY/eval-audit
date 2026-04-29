@@ -141,7 +141,7 @@ textarea {
 .filters input,
 .filters select,
 .annotation-panel select,
-.annotation-panel textarea {
+.event-note textarea {
   width: 100%;
   border: 1px solid #c9d2df;
   border-radius: 6px;
@@ -308,6 +308,11 @@ button:disabled {
   gap: 6px;
 }
 
+.event-note {
+  display: grid;
+  gap: 6px;
+}
+
 .annotation-actions button {
   display: inline-flex;
   gap: 6px;
@@ -316,8 +321,8 @@ button:disabled {
   padding: 0 10px;
 }
 
-.annotation-panel textarea {
-  min-height: 220px;
+.event-note textarea {
+  min-height: 88px;
   resize: vertical;
 }
 

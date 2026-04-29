@@ -16,7 +16,17 @@ const annotation: Annotation = {
   row_index: 0,
   review_status: "has_issue",
   review_note: "模型没有抽出事件",
+  event_notes: [],
   updated_at: "2026-04-29T00:00:00.000Z"
+};
+
+const eventNote = {
+  event_key: "unmatched_gold:0:none:0",
+  event_index: 0,
+  match_status: "unmatched_gold",
+  gold_event_index: 0,
+  pred_event_index: null,
+  note: "gold event needs manual review"
 };
 
 describe("annotations", () => {
@@ -121,6 +131,19 @@ describe("annotations", () => {
     ).toEqual([]);
   });
 
+  it("exports annotations when an event note changes", () => {
+    const eventOnlyAnnotation = {
+      ...annotation,
+      review_status: "unreviewed" as const,
+      review_note: "",
+      event_notes: [eventNote]
+    };
+
+    expect(getExportableAnnotations({ "56": eventOnlyAnnotation })).toEqual([
+      eventOnlyAnnotation
+    ]);
+  });
+
   it("sorts exportable annotations by row index then dialogue id", () => {
     const row10: Annotation = { ...annotation, dialogue_id: "2", row_index: 10 };
     const row2b: Annotation = { ...annotation, dialogue_id: "b", row_index: 2 };
@@ -135,15 +158,15 @@ describe("annotations", () => {
     ).toEqual([row2a, row2b, row10]);
   });
 
-  it("adds row context and exported_at to JSONL export", () => {
+  it("adds row context, event notes, and exported_at to JSONL export", () => {
     const jsonl = exportAnnotations({
-      annotations: { "56": annotation },
+      annotations: { "56": { ...annotation, event_notes: [eventNote] } },
       rowsByDialogueId: new Map([["56", rowAuditsFixture[0]]]),
       exportedAt: "2026-04-29T00:00:00.000Z"
     });
 
     expect(jsonl).toBe(
-      '{"artifact":"google_gemma_4_31B_it","dialogue_id":"56","row_index":0,"review_status":"has_issue","review_note":"模型没有抽出事件","gold_event_count":1,"pred_event_count":0,"matched_events":0,"unmatched_gold":1,"unmatched_pred":0,"exported_at":"2026-04-29T00:00:00.000Z"}\n'
+      '{"artifact":"google_gemma_4_31B_it","dialogue_id":"56","row_index":0,"review_status":"has_issue","review_note":"模型没有抽出事件","event_notes":[{"event_key":"unmatched_gold:0:none:0","event_index":0,"match_status":"unmatched_gold","gold_event_index":0,"pred_event_index":null,"note":"gold event needs manual review"}],"gold_event_count":1,"pred_event_count":0,"matched_events":0,"unmatched_gold":1,"unmatched_pred":0,"exported_at":"2026-04-29T00:00:00.000Z"}\n'
     );
   });
 

@@ -1,7 +1,9 @@
 import { formatOptionalMetric } from "../domain/format";
+import { eventNoteFor } from "../domain/eventNotes";
 import type {
   DialogueReview,
   EventComparison,
+  EventNote,
   FieldComparison,
   FieldName
 } from "../domain/types";
@@ -10,6 +12,8 @@ interface DialogueDetailProps {
   dialogue: DialogueReview | null;
   canGoPrevious: boolean;
   canGoNext: boolean;
+  eventNotes: EventNote[];
+  onEventNoteChange: (event: EventComparison, eventIndex: number, note: string) => void;
   onPrevious: () => void;
   onNext: () => void;
 }
@@ -32,7 +36,19 @@ function values(valuesToRender: string[] | null | undefined): string {
     : "-";
 }
 
-function EventComparisonCard({ event }: { event: EventComparison }) {
+interface EventComparisonCardProps {
+  event: EventComparison;
+  eventIndex: number;
+  note: string;
+  onNoteChange: (note: string) => void;
+}
+
+function EventComparisonCard({
+  event,
+  eventIndex,
+  note,
+  onNoteChange
+}: EventComparisonCardProps) {
   return (
     <article className="event-card">
       <div className="event-card-header">
@@ -65,6 +81,15 @@ function EventComparisonCard({ event }: { event: EventComparison }) {
           );
         })}
       </div>
+      <label className="event-note">
+        Note
+        <textarea
+          aria-label={`Event ${eventIndex + 1} note`}
+          value={note}
+          onChange={(event) => onNoteChange(event.target.value)}
+          rows={3}
+        />
+      </label>
     </article>
   );
 }
@@ -73,6 +98,8 @@ export function DialogueDetail({
   dialogue,
   canGoPrevious,
   canGoNext,
+  eventNotes,
+  onEventNoteChange,
   onPrevious,
   onNext
 }: DialogueDetailProps) {
@@ -117,9 +144,19 @@ export function DialogueDetail({
         ))}
       </section>
       <section className="events-stack">
-        {audit?.events.map((event, index) => (
-          <EventComparisonCard key={`${event.match_status}-${index}`} event={event} />
-        ))}
+        {audit?.events.map((event, index) => {
+          const eventNote = eventNoteFor(eventNotes, event, index);
+
+          return (
+            <EventComparisonCard
+              key={`${event.match_status}-${index}`}
+              event={event}
+              eventIndex={index}
+              note={eventNote?.note ?? ""}
+              onNoteChange={(note) => onEventNoteChange(event, index, note)}
+            />
+          );
+        })}
       </section>
     </section>
   );

@@ -3,11 +3,9 @@ import type { ReviewStatus } from "../domain/types";
 
 interface AnnotationPanelProps {
   status: ReviewStatus;
-  note: string;
   exportableCount: number;
   disabled?: boolean;
   onStatusChange: (status: ReviewStatus) => void;
-  onNoteChange: (note: string) => void;
   onSave: () => void;
   onClearCurrent: () => void;
   onClearAll: () => void;
@@ -16,9 +14,9 @@ interface AnnotationPanelProps {
 
 export function AnnotationPanel(props: AnnotationPanelProps) {
   return (
-    <aside className="annotation-panel" aria-label="Review note">
+    <aside className="annotation-panel" aria-label="Review controls">
       <div>
-        <p className="eyebrow">Review note</p>
+        <p className="eyebrow">Review controls</p>
       </div>
       <label>
         Review status
@@ -33,16 +31,6 @@ export function AnnotationPanel(props: AnnotationPanelProps) {
           <option value="has_issue">Has issue</option>
           <option value="skip">Skip</option>
         </select>
-      </label>
-      <label>
-        Review note
-        <textarea
-          aria-label="Review note"
-          disabled={props.disabled}
-          value={props.note}
-          onChange={(event) => props.onNoteChange(event.target.value)}
-          rows={10}
-        />
       </label>
       <div className="annotation-actions">
         <button type="button" disabled={props.disabled} onClick={props.onSave}>
