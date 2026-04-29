@@ -63,6 +63,18 @@ function twoDialogueDataset(): ReviewDataset {
   };
 }
 
+function reviewNoteColumn() {
+  return screen.getByRole("complementary", { name: "Review note" });
+}
+
+function reviewStatusControl() {
+  return within(reviewNoteColumn()).getByLabelText("Review status");
+}
+
+function reviewNoteControl() {
+  return within(reviewNoteColumn()).getByLabelText("Review note");
+}
+
 describe("Workbench", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -78,26 +90,29 @@ describe("Workbench", () => {
     expect(screen.getByText("remote provider HTTP 504")).toBeInTheDocument();
   });
 
-  it("places primary annotation controls inside the current dialogue header", () => {
+  it("renders review note as the third workbench column", () => {
     render(<Workbench dataset={dataset()} />);
 
     const currentDialogue = screen.getByRole("region", { name: "Current dialogue" });
-    expect(within(currentDialogue).getByLabelText("Review status")).toBeInTheDocument();
-    expect(within(currentDialogue).getByLabelText("Review note")).toBeInTheDocument();
-    expect(
-      within(currentDialogue).getByRole("button", { name: /Save current/i })
-    ).toBeInTheDocument();
+    const reviewNote = screen.getByRole("complementary", { name: "Review note" });
 
-    const annotationActions = screen.getByRole("region", { name: "Dialogue annotation" });
-    expect(within(annotationActions).queryByLabelText("Review status")).not.toBeInTheDocument();
-    expect(within(annotationActions).queryByLabelText("Review note")).not.toBeInTheDocument();
+    expect(screen.getByRole("complementary", { name: "Dialogue list" })).toBeInTheDocument();
+    expect(currentDialogue).toBeInTheDocument();
+    expect(reviewNote).toBeInTheDocument();
+    expect(within(reviewNote).getByLabelText("Review status")).toBeInTheDocument();
+    expect(within(reviewNote).getByLabelText("Review note")).toBeInTheDocument();
+    expect(
+      within(reviewNote).getByRole("button", { name: /Save current/i })
+    ).toBeInTheDocument();
+    expect(within(reviewNote).getByRole("button", { name: /Export JSONL/i })).toBeInTheDocument();
+    expect(within(currentDialogue).queryByLabelText("Review note")).not.toBeInTheDocument();
   });
 
   it("saves a dialogue annotation and counts it as exportable", async () => {
     render(<Workbench dataset={dataset()} />);
 
-    await userEvent.selectOptions(screen.getByLabelText("Review status"), "has_issue");
-    await userEvent.type(screen.getByLabelText("Review note"), "需要复核");
+    await userEvent.selectOptions(reviewStatusControl(), "has_issue");
+    await userEvent.type(reviewNoteControl(), "需要复核");
 
     expect(screen.getByText("Exportable annotations: 1")).toBeInTheDocument();
   });
@@ -108,7 +123,7 @@ describe("Workbench", () => {
     });
     render(<Workbench dataset={dataset()} />);
 
-    await userEvent.selectOptions(screen.getByLabelText("Review status"), "has_issue");
+    await userEvent.selectOptions(reviewStatusControl(), "has_issue");
 
     expect(screen.getByText("Exportable annotations: 1")).toBeInTheDocument();
     expect(screen.getByRole("status", { name: "Dataset warnings" })).toHaveTextContent(
@@ -122,7 +137,7 @@ describe("Workbench", () => {
     const exportButton = screen.getByRole("button", { name: /Export JSONL/i });
     expect(exportButton).toBeDisabled();
 
-    await userEvent.type(screen.getByLabelText("Review note"), "note only");
+    await userEvent.type(reviewNoteControl(), "note only");
 
     expect(screen.getByText("Exportable annotations: 1")).toBeInTheDocument();
     expect(exportButton).toBeEnabled();
@@ -131,14 +146,14 @@ describe("Workbench", () => {
   it("clears the current annotation back to unreviewed with no exportable records", async () => {
     render(<Workbench dataset={dataset()} />);
 
-    await userEvent.selectOptions(screen.getByLabelText("Review status"), "has_issue");
-    await userEvent.type(screen.getByLabelText("Review note"), "needs review");
+    await userEvent.selectOptions(reviewStatusControl(), "has_issue");
+    await userEvent.type(reviewNoteControl(), "needs review");
     expect(screen.getByText("Exportable annotations: 1")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: /Clear current/i }));
 
-    expect(screen.getByLabelText("Review status")).toHaveValue("unreviewed");
-    expect(screen.getByLabelText("Review note")).toHaveValue("");
+    expect(reviewStatusControl()).toHaveValue("unreviewed");
+    expect(reviewNoteControl()).toHaveValue("");
     expect(screen.getByText("Exportable annotations: 0")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Export JSONL/i })).toBeDisabled();
   });
@@ -193,13 +208,13 @@ describe("Workbench", () => {
     );
 
     const { rerender } = render(<Workbench dataset={firstDataset} />);
-    expect(screen.getByLabelText("Review status")).toHaveValue("unreviewed");
+    expect(reviewStatusControl()).toHaveValue("unreviewed");
 
     rerender(<Workbench dataset={secondDataset} />);
 
     expect(screen.getByRole("heading", { name: "Dialogue 57" })).toBeInTheDocument();
-    expect(screen.getByLabelText("Review status")).toHaveValue("accepted");
-    expect(screen.getByLabelText("Review note")).toHaveValue("already checked");
+    expect(reviewStatusControl()).toHaveValue("accepted");
+    expect(reviewNoteControl()).toHaveValue("already checked");
   });
 
   it("renders event rows with missing field comparisons without crashing", () => {

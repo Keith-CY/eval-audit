@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import { formatOptionalMetric } from "../domain/format";
 import type {
   DialogueReview,
@@ -11,7 +10,6 @@ interface DialogueDetailProps {
   dialogue: DialogueReview | null;
   canGoPrevious: boolean;
   canGoNext: boolean;
-  annotationControls?: ReactNode;
   onPrevious: () => void;
   onNext: () => void;
 }
@@ -75,7 +73,6 @@ export function DialogueDetail({
   dialogue,
   canGoPrevious,
   canGoNext,
-  annotationControls,
   onPrevious,
   onNext
 }: DialogueDetailProps) {
@@ -111,7 +108,6 @@ export function DialogueDetail({
               Next
             </button>
           </div>
-          {annotationControls}
         </div>
       </div>
       {dialogue.failure ? <div className="failure-box">{dialogue.failure.reason}</div> : null}

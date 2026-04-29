@@ -16,7 +16,6 @@ import type { Annotation, ReviewDataset, ReviewStatus, RowAudit } from "../domai
 import { AnnotationPanel } from "./AnnotationPanel";
 import { DialogueDetail } from "./DialogueDetail";
 import { DialogueList } from "./DialogueList";
-import { InlineAnnotationControls } from "./InlineAnnotationControls";
 import { SummaryBar } from "./SummaryBar";
 
 interface WorkbenchProps {
@@ -194,16 +193,6 @@ export function Workbench({ dataset }: WorkbenchProps) {
             dialogue={activeDialogue}
             canGoPrevious={activeIndex > 0}
             canGoNext={activeIndex >= 0 && activeIndex < filteredDialogues.length - 1}
-            annotationControls={
-              <InlineAnnotationControls
-                status={activeAnnotation?.review_status ?? "unreviewed"}
-                note={activeAnnotation?.review_note ?? ""}
-                disabled={!activeDialogue}
-                onStatusChange={(status) => updateActiveAnnotation({ review_status: status })}
-                onNoteChange={(note) => updateActiveAnnotation({ review_note: note })}
-                onSave={() => updateActiveAnnotation({})}
-              />
-            }
             onPrevious={() => {
               const previous = filteredDialogues[activeIndex - 1];
               if (previous) {
@@ -217,14 +206,19 @@ export function Workbench({ dataset }: WorkbenchProps) {
               }
             }}
           />
-          <AnnotationPanel
-            exportableCount={exportableCount}
-            disabled={!activeDialogue}
-            onClearCurrent={clearCurrent}
-            onClearAll={clearAll}
-            onExport={exportJsonl}
-          />
         </div>
+        <AnnotationPanel
+          status={activeAnnotation?.review_status ?? "unreviewed"}
+          note={activeAnnotation?.review_note ?? ""}
+          exportableCount={exportableCount}
+          disabled={!activeDialogue}
+          onStatusChange={(status) => updateActiveAnnotation({ review_status: status })}
+          onNoteChange={(note) => updateActiveAnnotation({ review_note: note })}
+          onSave={() => updateActiveAnnotation({})}
+          onClearCurrent={clearCurrent}
+          onClearAll={clearAll}
+          onExport={exportJsonl}
+        />
       </div>
     </section>
   );

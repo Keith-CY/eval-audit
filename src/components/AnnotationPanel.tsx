@@ -1,8 +1,14 @@
-import { Download, RotateCcw } from "lucide-react";
+import { Download, RotateCcw, Save } from "lucide-react";
+import type { ReviewStatus } from "../domain/types";
 
 interface AnnotationPanelProps {
+  status: ReviewStatus;
+  note: string;
   exportableCount: number;
   disabled?: boolean;
+  onStatusChange: (status: ReviewStatus) => void;
+  onNoteChange: (note: string) => void;
+  onSave: () => void;
   onClearCurrent: () => void;
   onClearAll: () => void;
   onExport: () => void;
@@ -10,8 +16,38 @@ interface AnnotationPanelProps {
 
 export function AnnotationPanel(props: AnnotationPanelProps) {
   return (
-    <section className="annotation-panel" aria-label="Dialogue annotation">
+    <aside className="annotation-panel" aria-label="Review note">
+      <div>
+        <p className="eyebrow">Review note</p>
+      </div>
+      <label>
+        Review status
+        <select
+          aria-label="Review status"
+          disabled={props.disabled}
+          value={props.status}
+          onChange={(event) => props.onStatusChange(event.target.value as ReviewStatus)}
+        >
+          <option value="unreviewed">Unreviewed</option>
+          <option value="accepted">Accepted</option>
+          <option value="has_issue">Has issue</option>
+          <option value="skip">Skip</option>
+        </select>
+      </label>
+      <label>
+        Review note
+        <textarea
+          aria-label="Review note"
+          disabled={props.disabled}
+          value={props.note}
+          onChange={(event) => props.onNoteChange(event.target.value)}
+          rows={10}
+        />
+      </label>
       <div className="annotation-actions">
+        <button type="button" disabled={props.disabled} onClick={props.onSave}>
+          <Save size={16} /> Save current
+        </button>
         <button type="button" disabled={props.disabled} onClick={props.onClearCurrent}>
           <RotateCcw size={16} /> Clear current
         </button>
@@ -22,6 +58,6 @@ export function AnnotationPanel(props: AnnotationPanelProps) {
           <Download size={16} /> Export JSONL
         </button>
       </div>
-    </section>
+    </aside>
   );
 }
