@@ -55,17 +55,17 @@ function isPredictionCandidate(path: string): boolean {
 export function classifyZipEntries(paths: string[]): ClassifiedEntries {
   const usablePaths = paths.filter((path) => !isMacOsMetadata(path));
   const summary =
-    usablePaths.find((path) => basename(path) === "event_eval_summary.json") ??
     usablePaths.find((path) => basename(path) === "event_eval_semantic_summary.json") ??
+    usablePaths.find((path) => basename(path) === "event_eval_summary.json") ??
     null;
   const rowAudit =
+    usablePaths.find((path) => basename(path) === "event_eval_semantic_row_audit.jsonl") ??
     usablePaths.find((path) => basename(path) === "row_audit_report.jsonl") ??
     usablePaths.find((path) => basename(path) === "event_eval_row_audit.jsonl") ??
-    usablePaths.find((path) => basename(path) === "event_eval_semantic_row_audit.jsonl") ??
     null;
   const eventDetails =
-    usablePaths.find((path) => basename(path) === "event_eval_details.jsonl") ??
     usablePaths.find((path) => basename(path) === "event_eval_semantic_details.jsonl") ??
+    usablePaths.find((path) => basename(path) === "event_eval_details.jsonl") ??
     null;
   const gold = usablePaths.find((path) => basename(path) === "gold_subset.jsonl") ?? null;
   const failures =

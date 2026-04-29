@@ -82,4 +82,27 @@ describe("classifyZipEntries", () => {
     expect(entries.gold).toBe("eval-0001/gold_subset.jsonl");
     expect(entries.missingRequired).toEqual([]);
   });
+
+  it("prefers semantic report files when both exact and semantic files are present", () => {
+    const entries = classifyZipEntries([
+      "eval-0001/gold_subset.jsonl",
+      "eval-0001/predictions/deepseek-v4-pro.jsonl",
+      "eval-0001/reports/deepseek-v4-pro/event_eval_summary.json",
+      "eval-0001/reports/deepseek-v4-pro/event_eval_semantic_summary.json",
+      "eval-0001/reports/deepseek-v4-pro/event_eval_row_audit.jsonl",
+      "eval-0001/reports/deepseek-v4-pro/event_eval_semantic_row_audit.jsonl",
+      "eval-0001/reports/deepseek-v4-pro/event_eval_details.jsonl",
+      "eval-0001/reports/deepseek-v4-pro/event_eval_semantic_details.jsonl"
+    ]);
+
+    expect(entries.summary).toBe(
+      "eval-0001/reports/deepseek-v4-pro/event_eval_semantic_summary.json"
+    );
+    expect(entries.rowAudit).toBe(
+      "eval-0001/reports/deepseek-v4-pro/event_eval_semantic_row_audit.jsonl"
+    );
+    expect(entries.eventDetails).toBe(
+      "eval-0001/reports/deepseek-v4-pro/event_eval_semantic_details.jsonl"
+    );
+  });
 });
