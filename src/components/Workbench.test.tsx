@@ -78,6 +78,21 @@ describe("Workbench", () => {
     expect(screen.getByText("remote provider HTTP 504")).toBeInTheDocument();
   });
 
+  it("places primary annotation controls inside the current dialogue header", () => {
+    render(<Workbench dataset={dataset()} />);
+
+    const currentDialogue = screen.getByRole("region", { name: "Current dialogue" });
+    expect(within(currentDialogue).getByLabelText("Review status")).toBeInTheDocument();
+    expect(within(currentDialogue).getByLabelText("Review note")).toBeInTheDocument();
+    expect(
+      within(currentDialogue).getByRole("button", { name: /Save current/i })
+    ).toBeInTheDocument();
+
+    const annotationActions = screen.getByRole("region", { name: "Dialogue annotation" });
+    expect(within(annotationActions).queryByLabelText("Review status")).not.toBeInTheDocument();
+    expect(within(annotationActions).queryByLabelText("Review note")).not.toBeInTheDocument();
+  });
+
   it("saves a dialogue annotation and counts it as exportable", async () => {
     render(<Workbench dataset={dataset()} />);
 

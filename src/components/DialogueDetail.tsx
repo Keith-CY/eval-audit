@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { formatOptionalMetric } from "../domain/format";
 import type {
   DialogueReview,
@@ -10,6 +11,7 @@ interface DialogueDetailProps {
   dialogue: DialogueReview | null;
   canGoPrevious: boolean;
   canGoNext: boolean;
+  annotationControls?: ReactNode;
   onPrevious: () => void;
   onNext: () => void;
 }
@@ -73,6 +75,7 @@ export function DialogueDetail({
   dialogue,
   canGoPrevious,
   canGoNext,
+  annotationControls,
   onPrevious,
   onNext
 }: DialogueDetailProps) {
@@ -88,9 +91,9 @@ export function DialogueDetail({
   const audit = dialogue.rowAudit;
 
   return (
-    <section className="detail-pane">
+    <section className="detail-pane" aria-label="Current dialogue">
       <div className="detail-header">
-        <div>
+        <div className="detail-title">
           <p className="eyebrow">Current dialogue</p>
           <h2>Dialogue {dialogue.dialogue_id}</h2>
           <p>
@@ -99,13 +102,16 @@ export function DialogueDetail({
             unmatched pred {audit?.unmatched_pred ?? "-"}
           </p>
         </div>
-        <div className="nav-buttons">
-          <button type="button" disabled={!canGoPrevious} onClick={onPrevious}>
-            Previous
-          </button>
-          <button type="button" disabled={!canGoNext} onClick={onNext}>
-            Next
-          </button>
+        <div className="detail-controls">
+          <div className="nav-buttons">
+            <button type="button" disabled={!canGoPrevious} onClick={onPrevious}>
+              Previous
+            </button>
+            <button type="button" disabled={!canGoNext} onClick={onNext}>
+              Next
+            </button>
+          </div>
+          {annotationControls}
         </div>
       </div>
       {dialogue.failure ? <div className="failure-box">{dialogue.failure.reason}</div> : null}
