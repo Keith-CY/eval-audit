@@ -1,14 +1,12 @@
 import JSZip from "jszip";
+import { normalizeEvaluationArtifacts } from "./evaluationCompat";
 import { classifyZipEntries } from "./fileDiscovery";
 import { parseJsonl } from "./jsonl";
 import { normalizeDataset } from "./normalize";
 import type {
-  EvaluationSummary,
-  EventComparison,
   FailureRecord,
   PredictionRow,
-  ReviewDataset,
-  RowAudit
+  ReviewDataset
 } from "./types";
 
 export const EVALUATION_ZIP_LIMITS = {
@@ -88,11 +86,21 @@ export async function loadEvaluationZip(file: File): Promise<ReviewDataset> {
   const rowAuditText = await readText(zip, entries.rowAudit);
   const eventDetailsText = await readText(zip, entries.eventDetails);
   const predictionText = await readText(zip, entries.predictions);
+  const goldText = entries.gold ? await readText(zip, entries.gold) : "";
 
-  const summary = parseJson<EvaluationSummary>(entries.summary, summaryText);
-  const rowAudits = parseJsonl<RowAudit>(rowAuditText, entries.rowAudit);
-  const eventDetails = parseJsonl<EventComparison>(eventDetailsText, entries.eventDetails);
+  const rawSummary = parseJson<unknown>(entries.summary, summaryText);
+  const rawRowAudits = parseJsonl<unknown>(rowAuditText, entries.rowAudit);
+  const rawEventDetails = parseJsonl<unknown>(eventDetailsText, entries.eventDetails);
   const predictionRows = parseJsonl<PredictionRow>(predictionText, entries.predictions);
+  const goldRows = entries.gold ? parseJsonl<PredictionRow>(goldText, entries.gold) : [];
+  const { summary, rowAudits, eventDetails } = normalizeEvaluationArtifacts({
+    summary: rawSummary,
+    summaryPath: entries.summary,
+    rowAudits: rawRowAudits,
+    eventDetails: rawEventDetails,
+    predictionRows,
+    goldRows
+  });
 
   let failures: FailureRecord[] = [];
   let failuresWarning: string | null = null;

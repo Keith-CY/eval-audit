@@ -56,4 +56,30 @@ describe("classifyZipEntries", () => {
 
     expect(entries.predictions).toBe("artifact/a-model.jsonl");
   });
+
+  it("finds melix evaluation bundles with nested report and prediction directories", () => {
+    const entries = classifyZipEntries([
+      "eval-0001/evaluation-result.json",
+      "eval-0001/evaluation-summary.json",
+      "eval-0001/gold_subset.jsonl",
+      "eval-0001/predictions/deepseek-v4-pro.jsonl",
+      "eval-0001/predictions/deepseek-v4-pro.failures.jsonl",
+      "eval-0001/reports/deepseek-v4-pro/event_eval_summary.json",
+      "eval-0001/reports/deepseek-v4-pro/event_eval_details.jsonl",
+      "eval-0001/reports/deepseek-v4-pro/event_eval_row_audit.jsonl",
+      "eval-0001/reports/deepseek-v4-pro/event_eval_dialogue_traces.jsonl"
+    ]);
+
+    expect(entries.summary).toBe("eval-0001/reports/deepseek-v4-pro/event_eval_summary.json");
+    expect(entries.rowAudit).toBe(
+      "eval-0001/reports/deepseek-v4-pro/event_eval_row_audit.jsonl"
+    );
+    expect(entries.eventDetails).toBe(
+      "eval-0001/reports/deepseek-v4-pro/event_eval_details.jsonl"
+    );
+    expect(entries.predictions).toBe("eval-0001/predictions/deepseek-v4-pro.jsonl");
+    expect(entries.failures).toBe("eval-0001/predictions/deepseek-v4-pro.failures.jsonl");
+    expect(entries.gold).toBe("eval-0001/gold_subset.jsonl");
+    expect(entries.missingRequired).toEqual([]);
+  });
 });
