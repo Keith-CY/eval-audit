@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { dialogueF1 } from "../domain/dialogueMetrics";
 import { formatCount, formatOptionalMetric } from "../domain/format";
 import type {
@@ -38,6 +38,11 @@ interface EventScoreBadge {
   score: number | null | undefined;
 }
 
+interface EvidenceSelection {
+  key: string;
+  terms: string[];
+}
+
 function scoreRange(scores: Array<number | null | undefined>): ScoreRange {
   const finiteScores = scores.filter(
     (score): score is number => typeof score === "number" && Number.isFinite(score)
@@ -71,10 +76,80 @@ function fieldRangeKey(eventIndex: number, field: FieldName): string {
   return `${eventIndex}:${field}`;
 }
 
+function evidenceKey(label: string, eventIndex: number, field: FieldName): string {
+  return `${label}:${eventIndex}:${field}`;
+}
+
 function values(valuesToRender: string[] | null | undefined): string {
   return Array.isArray(valuesToRender) && valuesToRender.length > 0
     ? valuesToRender.join(", ")
     : "-";
+}
+
+function evidenceTerms(comparison: FieldComparison): string[] {
+  const terms = [...(comparison.gold ?? []), ...(comparison.pred ?? [])]
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+
+  return Array.from(new Set(terms));
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function compactTerm(value: string): string {
+  return value.replace(/\s+/g, "");
+}
+
+function evidencePattern(value: string): string | null {
+  const compact = compactTerm(value);
+  if (compact.length === 0) return null;
+
+  return Array.from(compact).map(escapeRegExp).join("\\s*");
+}
+
+function evidenceRegex(terms: string[]): RegExp | null {
+  const patterns = Array.from(new Set(terms))
+    .sort((left, right) => compactTerm(right).length - compactTerm(left).length)
+    .map(evidencePattern)
+    .filter((pattern): pattern is string => pattern !== null);
+
+  return patterns.length > 0 ? new RegExp(patterns.join("|"), "gu") : null;
+}
+
+function highlightEvidence(line: string, terms: string[]): ReactNode[] {
+  const regex = evidenceRegex(terms);
+  if (!regex) return [line];
+
+  const nodes: ReactNode[] = [];
+  let lastIndex = 0;
+
+  for (const match of line.matchAll(regex)) {
+    const matchedText = match[0];
+    const matchIndex = match.index ?? 0;
+    if (matchedText.length === 0) continue;
+
+    if (matchIndex > lastIndex) {
+      nodes.push(line.slice(lastIndex, matchIndex));
+    }
+
+    nodes.push(
+      <mark
+        className="dialogue-evidence-highlight"
+        key={`${matchIndex}-${matchedText}`}
+      >
+        {matchedText}
+      </mark>
+    );
+    lastIndex = matchIndex + matchedText.length;
+  }
+
+  if (lastIndex < line.length) {
+    nodes.push(line.slice(lastIndex));
+  }
+
+  return nodes.length > 0 ? nodes : [line];
 }
 
 function eventText(event: ExtractedEvent): string {
@@ -192,12 +267,16 @@ function FieldComparisonRows({
   events,
   label,
   eventScoreRanges,
-  fieldScoreRanges
+  fieldScoreRanges,
+  selectedEvidenceKey,
+  onEvidenceSelect
 }: {
   events: EventComparison[];
   label: string;
   eventScoreRanges: Map<number, ScoreRange>;
   fieldScoreRanges: Map<string, ScoreRange>;
+  selectedEvidenceKey: string | null;
+  onEvidenceSelect: (selection: EvidenceSelection | null) => void;
 }) {
   if (events.length === 0) {
     return <p className="empty-list">No field comparisons</p>;
@@ -220,9 +299,22 @@ function FieldComparisonRows({
           <div className="comparison-field-grid">
             {fields.map((field) => {
               const comparison = event.fields?.[field] ?? emptyFieldComparison;
+              const terms = evidenceTerms(comparison);
+              const selectionKey = evidenceKey(label, eventIndex, field);
+              const isSelected = selectedEvidenceKey === selectionKey;
 
               return (
-                <div className="comparison-field-row" key={field}>
+                <button
+                  aria-label={`Highlight ${label} event ${eventIndex + 1} ${field} evidence`}
+                  aria-pressed={isSelected}
+                  className="comparison-field-row"
+                  disabled={terms.length === 0}
+                  key={field}
+                  onClick={() =>
+                    onEvidenceSelect(isSelected ? null : { key: selectionKey, terms })
+                  }
+                  type="button"
+                >
                   <strong>{field}</strong>
                   <span>gold: {values(comparison.gold)}</span>
                   <span>pred: {values(comparison.pred)}</span>
@@ -236,7 +328,7 @@ function FieldComparisonRows({
                     TP {comparison.TP ?? 0} / FP {comparison.FP ?? 0} / FN {comparison.FN ?? 0} /
                     F1 {formatOptionalMetric(comparison.f1 ?? null)}
                   </span>
-                </div>
+                </button>
               );
             })}
           </div>
@@ -252,11 +344,16 @@ export function ComparisonView({ evaluations }: ComparisonViewProps) {
   const [activeDialogueId, setActiveDialogueId] = useState<string | null>(
     allDialogueIds[0] ?? null
   );
+  const [evidenceSelection, setEvidenceSelection] = useState<EvidenceSelection | null>(null);
 
   useEffect(() => {
     setSearch("");
     setActiveDialogueId(allDialogueIds[0] ?? null);
   }, [allDialogueIds]);
+
+  useEffect(() => {
+    setEvidenceSelection(null);
+  }, [activeDialogueId]);
 
   const filteredDialogueIds = useMemo(() => {
     const query = search.trim();
@@ -379,9 +476,11 @@ export function ComparisonView({ evaluations }: ComparisonViewProps) {
           </div>
         </div>
         {referenceDialogue ? (
-          <section className="dialogue-text">
+          <section className="dialogue-text" aria-label="Dialogue evidence text">
             {referenceDialogue.dialogue.map((line, index) => (
-              <p key={`${activeId}-${index}`}>{line}</p>
+              <p key={`${activeId}-${index}`}>
+                {highlightEvidence(line, evidenceSelection?.terms ?? [])}
+              </p>
             ))}
           </section>
         ) : null}
@@ -427,6 +526,8 @@ export function ComparisonView({ evaluations }: ComparisonViewProps) {
                   label={label}
                   eventScoreRanges={eventScoreRanges}
                   fieldScoreRanges={fieldScoreRanges}
+                  selectedEvidenceKey={evidenceSelection?.key ?? null}
+                  onEvidenceSelect={setEvidenceSelection}
                 />
               </section>
             );

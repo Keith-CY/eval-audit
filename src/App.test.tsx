@@ -241,6 +241,38 @@ describe("App", () => {
     );
   });
 
+  it("highlights dialogue evidence when a field comparison row is selected", async () => {
+    render(<App />);
+
+    await userEvent.upload(screen.getByLabelText("Upload evaluation zip"), [
+      await makeEvaluationZip({ artifact: "eval_one" }),
+      await makeEvaluationZip({
+        artifact: "eval_two",
+        weightedF1: 1,
+        predDigest: "speaker_18点起床"
+      })
+    ]);
+
+    await userEvent.click(await screen.findByRole("tab", { name: /All results/ }));
+
+    const timeEvidenceButton = screen.getByRole("button", {
+      name: "Highlight Eval 2 event 1 time evidence"
+    });
+
+    await userEvent.click(timeEvidenceButton);
+
+    expect(timeEvidenceButton).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("8 点", { selector: "mark.dialogue-evidence-highlight" }))
+      .toBeInTheDocument();
+
+    await userEvent.click(timeEvidenceButton);
+
+    expect(timeEvidenceButton).toHaveAttribute("aria-pressed", "false");
+    expect(
+      screen.queryByText("8 点", { selector: "mark.dialogue-evidence-highlight" })
+    ).not.toBeInTheDocument();
+  });
+
   it("shows a readable error and keeps upload available when required files are missing", async () => {
     render(<App />);
 

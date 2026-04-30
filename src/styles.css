@@ -301,6 +301,13 @@ button:disabled {
   line-height: 1.6;
 }
 
+.dialogue-evidence-highlight {
+  padding: 1px 3px;
+  border-radius: 3px;
+  background: #fff0a8;
+  color: #18202f;
+}
+
 .events-stack {
   display: grid;
   gap: 12px;
@@ -494,9 +501,31 @@ button:disabled {
 .comparison-field-row {
   display: grid;
   gap: 4px;
+  width: 100%;
   padding: 8px;
+  color: inherit;
+  text-align: left;
   background: #f8fafc;
+  border: 1px solid transparent;
   border-radius: 6px;
+}
+
+.comparison-field-row:not(:disabled) {
+  cursor: pointer;
+}
+
+.comparison-field-row:disabled {
+  color: #657187;
+}
+
+.comparison-field-row:focus-visible {
+  outline: 2px solid #235789;
+  outline-offset: 2px;
+}
+
+.comparison-field-row[aria-pressed="true"] {
+  background: #edf5ff;
+  border-color: #235789;
 }
 
 .comparison-field-row span {
