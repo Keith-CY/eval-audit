@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import JSZip from "jszip";
 import { describe, expect, it } from "vitest";
@@ -35,6 +35,19 @@ describe("App", () => {
       screen.getByLabelText("Upload evaluation zip"),
       await makeEvaluationZip()
     );
+
+    expect(await screen.findByText("google_gemma_4_31B_it")).toBeInTheDocument();
+    expect(screen.getAllByText("Dialogue 56")).toHaveLength(2);
+  });
+
+  it("loads an evaluation zip dropped onto the upload panel", async () => {
+    render(<App />);
+
+    fireEvent.drop(screen.getByRole("region", { name: "Upload evaluation artifact" }), {
+      dataTransfer: {
+        files: [await makeEvaluationZip()]
+      }
+    });
 
     expect(await screen.findByText("google_gemma_4_31B_it")).toBeInTheDocument();
     expect(screen.getAllByText("Dialogue 56")).toHaveLength(2);

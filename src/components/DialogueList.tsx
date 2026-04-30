@@ -1,5 +1,6 @@
 import type { AnnotationMap } from "../domain/annotations";
 import type { EvaluationStatusFilter, ReviewStatusFilter } from "../domain/filters";
+import { formatOptionalMetric } from "../domain/format";
 import type { DialogueReview } from "../domain/types";
 
 interface DialogueListProps {
@@ -13,6 +14,13 @@ interface DialogueListProps {
   onReviewStatusChange: (value: ReviewStatusFilter) => void;
   onEvaluationStatusChange: (value: EvaluationStatusFilter) => void;
   onSelectDialogue: (dialogueId: string) => void;
+}
+
+function dialogueF1(dialogue: DialogueReview): number | null {
+  const events = dialogue.rowAudit?.events ?? [];
+  if (events.length === 0) return null;
+
+  return events.reduce((total, event) => total + event.weighted_f1, 0) / events.length;
 }
 
 export function DialogueList(props: DialogueListProps) {
@@ -74,7 +82,8 @@ export function DialogueList(props: DialogueListProps) {
                 <span>Dialogue {dialogue.dialogue_id}</span>
                 <small>
                   gold {audit?.gold_event_count ?? "-"} / pred {audit?.pred_event_count ?? "-"} /
-                  matched {audit?.matched_events ?? "-"}
+                  matched {audit?.matched_events ?? "-"} / F1{" "}
+                  {formatOptionalMetric(dialogueF1(dialogue))}
                 </small>
                 <small>
                   {status}

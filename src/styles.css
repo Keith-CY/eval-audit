@@ -46,8 +46,18 @@ textarea {
   padding: 32px;
 }
 
+.upload-panel.drag-active {
+  border-color: #235789;
+  background: #edf5ff;
+}
+
 .upload-icon {
   color: #235789;
+}
+
+.upload-hint {
+  margin: -6px 0 0;
+  color: #657187;
 }
 
 .file-picker {

@@ -110,6 +110,18 @@ describe("Workbench", () => {
     expect(within(currentDialogue).getByLabelText("Event 1 note")).toBeInTheDocument();
   });
 
+  it("shows dialogue F1 in the dialogue list", () => {
+    render(<Workbench dataset={twoDialogueDataset()} />);
+
+    const list = screen.getByRole("complementary", { name: "Dialogue list" });
+    expect(within(list).getByRole("button", { name: /Dialogue 56/ })).toHaveTextContent(
+      "F1 0.0%"
+    );
+    expect(within(list).getByRole("button", { name: /Dialogue 57/ })).toHaveTextContent(
+      "F1 100.0%"
+    );
+  });
+
   it("saves a dialogue annotation and counts it as exportable", async () => {
     render(<Workbench dataset={dataset()} />);
 
