@@ -194,6 +194,28 @@ describe("App", () => {
     expect(within(evalTwo).getAllByText("TP 1 / FP 0 / FN 0 / F1 100.0%")).toHaveLength(3);
   });
 
+  it("marks the highest and lowest dialogue, event, and field comparison scores", async () => {
+    render(<App />);
+
+    await userEvent.upload(screen.getByLabelText("Upload evaluation zip"), [
+      await makeEvaluationZip({ artifact: "eval_one" }),
+      await makeEvaluationZip({
+        artifact: "eval_two",
+        weightedF1: 1,
+        predDigest: "speaker_18点起床"
+      })
+    ]);
+
+    await userEvent.click(await screen.findByRole("tab", { name: /All results/ }));
+
+    expect(screen.getByLabelText("Eval 1 dialogue score")).toHaveClass("score-worst");
+    expect(screen.getByLabelText("Eval 2 dialogue score")).toHaveClass("score-best");
+    expect(screen.getByLabelText("Eval 1 event 1 score")).toHaveClass("score-worst");
+    expect(screen.getByLabelText("Eval 2 event 1 score")).toHaveClass("score-best");
+    expect(screen.getByLabelText("Eval 1 event 1 actor score")).toHaveClass("score-worst");
+    expect(screen.getByLabelText("Eval 2 event 1 actor score")).toHaveClass("score-best");
+  });
+
   it("shows a readable error and keeps upload available when required files are missing", async () => {
     render(<App />);
 

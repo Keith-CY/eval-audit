@@ -413,6 +413,27 @@ button:disabled {
   overflow-wrap: anywhere;
 }
 
+.score-best,
+.score-worst {
+  display: inline-block;
+  width: fit-content;
+  padding: 2px 6px;
+  border: 1px solid;
+  border-radius: 4px;
+}
+
+.score-best {
+  color: #17633a;
+  background: #e9f7ee;
+  border-color: #9bd5af;
+}
+
+.score-worst {
+  color: #9f1d35;
+  background: #fff0f1;
+  border-color: #e5a1aa;
+}
+
 .comparison-event {
   display: grid;
   gap: 4px;

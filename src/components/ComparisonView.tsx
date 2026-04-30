@@ -26,6 +26,45 @@ const emptyFieldComparison: FieldComparison = {
   f1: null
 };
 
+interface ScoreRange {
+  best: number | null;
+  worst: number | null;
+  hasSpread: boolean;
+}
+
+function scoreRange(scores: Array<number | null | undefined>): ScoreRange {
+  const finiteScores = scores.filter(
+    (score): score is number => typeof score === "number" && Number.isFinite(score)
+  );
+
+  if (finiteScores.length < 2) {
+    return { best: null, worst: null, hasSpread: false };
+  }
+
+  const best = Math.max(...finiteScores);
+  const worst = Math.min(...finiteScores);
+
+  return { best, worst, hasSpread: best !== worst };
+}
+
+function scoreClass(
+  score: number | null | undefined,
+  range: ScoreRange | undefined
+): "score-best" | "score-worst" | undefined {
+  if (!range?.hasSpread || typeof score !== "number" || !Number.isFinite(score)) {
+    return undefined;
+  }
+
+  if (score === range.best) return "score-best";
+  if (score === range.worst) return "score-worst";
+
+  return undefined;
+}
+
+function fieldRangeKey(eventIndex: number, field: FieldName): string {
+  return `${eventIndex}:${field}`;
+}
+
 function values(valuesToRender: string[] | null | undefined): string {
   return Array.isArray(valuesToRender) && valuesToRender.length > 0
     ? valuesToRender.join(", ")
@@ -97,7 +136,17 @@ function EventList({ events }: { events: ExtractedEvent[] }) {
   );
 }
 
-function FieldComparisonRows({ events, label }: { events: EventComparison[]; label: string }) {
+function FieldComparisonRows({
+  events,
+  label,
+  eventScoreRanges,
+  fieldScoreRanges
+}: {
+  events: EventComparison[];
+  label: string;
+  eventScoreRanges: Map<number, ScoreRange>;
+  fieldScoreRanges: Map<string, ScoreRange>;
+}) {
   if (events.length === 0) {
     return <p className="empty-list">No field comparisons</p>;
   }
@@ -109,7 +158,10 @@ function FieldComparisonRows({ events, label }: { events: EventComparison[]; lab
         <article className="comparison-field-event" key={`${event.match_status}-${eventIndex}`}>
           <div className="event-card-header">
             <strong>Event {eventIndex + 1}</strong>
-            <span>
+            <span
+              aria-label={`${label} event ${eventIndex + 1} score`}
+              className={scoreClass(event.weighted_f1, eventScoreRanges.get(eventIndex))}
+            >
               {event.match_status} / F1 {formatOptionalMetric(event.weighted_f1 ?? null)}
             </span>
           </div>
@@ -122,7 +174,13 @@ function FieldComparisonRows({ events, label }: { events: EventComparison[]; lab
                   <strong>{field}</strong>
                   <span>gold: {values(comparison.gold)}</span>
                   <span>pred: {values(comparison.pred)}</span>
-                  <span>
+                  <span
+                    aria-label={`${label} event ${eventIndex + 1} ${field} score`}
+                    className={scoreClass(
+                      comparison.f1,
+                      fieldScoreRanges.get(fieldRangeKey(eventIndex, field))
+                    )}
+                  >
                     TP {comparison.TP ?? 0} / FP {comparison.FP ?? 0} / FN {comparison.FN ?? 0} /
                     F1 {formatOptionalMetric(comparison.f1 ?? null)}
                   </span>
@@ -160,12 +218,44 @@ export function ComparisonView({ evaluations }: ComparisonViewProps) {
     filteredDialogueIds[0] ??
     null;
   const activeIndex = activeId ? filteredDialogueIds.indexOf(activeId) : -1;
-  const resultRows = evaluations.map((evaluation) => ({
-    evaluation,
-    dialogue: activeId ? findDialogue(evaluation, activeId) : null
-  }));
+  const resultRows = evaluations.map((evaluation) => {
+    const dialogue = activeId ? findDialogue(evaluation, activeId) : null;
+
+    return {
+      evaluation,
+      dialogue,
+      dialogueScore: dialogueF1(dialogue)
+    };
+  });
   const referenceDialogue = resultRows.find((result) => result.dialogue)?.dialogue ?? null;
   const goldEvents = goldEventsFor(resultRows.map((result) => result.dialogue));
+  const dialogueScoreRange = scoreRange(resultRows.map((result) => result.dialogueScore));
+  const eventScoreRanges = new Map<number, ScoreRange>();
+  const fieldScoreRanges = new Map<string, ScoreRange>();
+  const maxEventCount = Math.max(
+    0,
+    ...resultRows.map((result) => result.dialogue?.rowAudit?.events.length ?? 0)
+  );
+
+  for (let eventIndex = 0; eventIndex < maxEventCount; eventIndex += 1) {
+    eventScoreRanges.set(
+      eventIndex,
+      scoreRange(
+        resultRows.map((result) => result.dialogue?.rowAudit?.events[eventIndex]?.weighted_f1)
+      )
+    );
+
+    for (const field of fields) {
+      fieldScoreRanges.set(
+        fieldRangeKey(eventIndex, field),
+        scoreRange(
+          resultRows.map(
+            (result) => result.dialogue?.rowAudit?.events[eventIndex]?.fields?.[field]?.f1
+          )
+        )
+      );
+    }
+  }
 
   if (!activeId) {
     return (
@@ -249,16 +339,22 @@ export function ComparisonView({ evaluations }: ComparisonViewProps) {
             <small>{formatCount(goldEvents.length)} events</small>
             <EventList events={goldEvents} />
           </section>
-          {resultRows.map(({ evaluation, dialogue }, index) => {
+          {resultRows.map(({ evaluation, dialogue, dialogueScore }, index) => {
             const audit = dialogue?.rowAudit ?? null;
+            const label = `Eval ${index + 1}`;
 
             return (
               <section className="comparison-column" key={evaluation.id}>
-                <h3>Eval {index + 1}</h3>
+                <h3>{label}</h3>
                 <p className="comparison-artifact">{evaluation.dataset.artifact}</p>
                 <small>{evaluation.fileName}</small>
                 <div className="comparison-metrics">
-                  <span>F1 {formatOptionalMetric(dialogueF1(dialogue))}</span>
+                  <span
+                    aria-label={`${label} dialogue score`}
+                    className={scoreClass(dialogueScore, dialogueScoreRange)}
+                  >
+                    F1 {formatOptionalMetric(dialogueScore)}
+                  </span>
                   <span>
                     gold {audit?.gold_event_count ?? "-"} / pred {audit?.pred_event_count ?? "-"}
                   </span>
@@ -273,7 +369,9 @@ export function ComparisonView({ evaluations }: ComparisonViewProps) {
                 <EventList events={dialogue?.predEvents ?? []} />
                 <FieldComparisonRows
                   events={dialogue?.rowAudit?.events ?? []}
-                  label={`Eval ${index + 1}`}
+                  label={label}
+                  eventScoreRanges={eventScoreRanges}
+                  fieldScoreRanges={fieldScoreRanges}
                 />
               </section>
             );
