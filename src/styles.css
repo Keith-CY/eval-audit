@@ -409,6 +409,12 @@ button:disabled {
   margin: 0;
 }
 
+.field-comparison {
+  margin-top: 12px;
+  padding-top: 18px;
+  border-top: 1px solid #d9e0ea;
+}
+
 .comparison-metrics span {
   overflow-wrap: anywhere;
 }
