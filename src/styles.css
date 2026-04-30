@@ -86,6 +86,32 @@ textarea {
   gap: 16px;
 }
 
+.dataset-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  overflow-x: auto;
+}
+
+.dataset-tab {
+  display: grid;
+  gap: 2px;
+  min-width: 150px;
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.dataset-tab.active {
+  border-color: #235789;
+  background: #edf5ff;
+}
+
+.dataset-tab small,
+.comparison-column small,
+.comparison-event small {
+  color: #657187;
+}
+
 .summary-band {
   display: grid;
   grid-template-columns: minmax(220px, 1.5fr) repeat(7, minmax(130px, 1fr));
@@ -149,6 +175,7 @@ textarea {
 }
 
 .filters input,
+.dialogue-sidebar > input,
 .filters select,
 .annotation-panel select,
 .event-note textarea {
@@ -336,9 +363,66 @@ button:disabled {
   resize: vertical;
 }
 
+.comparison-view {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.comparison-detail,
+.comparison-column {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+  background: #ffffff;
+  border: 1px solid #d9e0ea;
+  border-radius: 8px;
+}
+
+.comparison-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+
+.comparison-column h3,
+.comparison-column p {
+  margin: 0;
+}
+
+.comparison-artifact {
+  font-weight: 700;
+}
+
+.comparison-metrics,
+.comparison-event-list {
+  display: grid;
+  gap: 8px;
+}
+
+.comparison-metrics span {
+  overflow-wrap: anywhere;
+}
+
+.comparison-event {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid #e0e6ef;
+  border-radius: 6px;
+  background: #f8fafc;
+}
+
+.comparison-event p {
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 980px) {
   .summary-band,
   .workbench-grid,
+  .comparison-view,
   .detail-header,
   .event-card-header,
   .event-pair,

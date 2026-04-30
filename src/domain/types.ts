@@ -138,3 +138,9 @@ export interface ReviewDataset {
   dialogues: DialogueReview[];
   warnings: string[];
 }
+
+export interface LoadedEvaluation {
+  id: string;
+  fileName: string;
+  dataset: ReviewDataset;
+}

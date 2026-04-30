@@ -4,10 +4,10 @@ import { Upload } from "lucide-react";
 interface UploadPanelProps {
   loading: boolean;
   error: string | null;
-  onFileSelected: (file: File) => void;
+  onFilesSelected: (files: File[]) => void;
 }
 
-export function UploadPanel({ loading, error, onFileSelected }: UploadPanelProps) {
+export function UploadPanel({ loading, error, onFilesSelected }: UploadPanelProps) {
   const [dragActive, setDragActive] = useState(false);
 
   function handleDragOver(event: DragEvent<HTMLElement>) {
@@ -27,9 +27,8 @@ export function UploadPanel({ loading, error, onFileSelected }: UploadPanelProps
 
     if (loading) return;
 
-    const files = event.dataTransfer.files;
-    const file = files.item?.(0) ?? files[0];
-    if (file) onFileSelected(file);
+    const files = Array.from(event.dataTransfer.files);
+    if (files.length > 0) onFilesSelected(files);
   }
 
   return (
@@ -45,20 +44,21 @@ export function UploadPanel({ loading, error, onFileSelected }: UploadPanelProps
         <Upload size={32} />
       </div>
       <h1>Evaluation Review</h1>
-      <p>Upload one evaluation zip. The file is parsed in this browser.</p>
+      <p>Upload one or more evaluation zips. Files are parsed in this browser.</p>
       <p className="upload-hint">
-        {dragActive ? "Drop zip to load" : "Drag zip here or choose it below"}
+        {dragActive ? "Drop zips to load" : "Drag zips here or choose them below"}
       </p>
       <label className="file-picker">
-        <span>{loading ? "Loading..." : "Choose zip"}</span>
+        <span>{loading ? "Loading..." : "Choose zips"}</span>
         <input
           aria-label="Upload evaluation zip"
           type="file"
           accept=".zip,application/zip"
+          multiple
           disabled={loading}
           onChange={(event) => {
-            const file = event.target.files?.[0];
-            if (file) onFileSelected(file);
+            const files = Array.from(event.target.files ?? []);
+            if (files.length > 0) onFilesSelected(files);
           }}
         />
       </label>
