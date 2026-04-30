@@ -32,6 +32,12 @@ interface ScoreRange {
   hasSpread: boolean;
 }
 
+interface EventScoreBadge {
+  ariaLabel: string;
+  range: ScoreRange | undefined;
+  score: number | null | undefined;
+}
+
 function scoreRange(scores: Array<number | null | undefined>): ScoreRange {
   const finiteScores = scores.filter(
     (score): score is number => typeof score === "number" && Number.isFinite(score)
@@ -115,23 +121,69 @@ function goldEventsFor(dialogues: Array<DialogueReview | null>): ExtractedEvent[
   );
 }
 
-function EventList({ events }: { events: ExtractedEvent[] }) {
+function eventScoreBadgesFor(
+  dialogue: DialogueReview | null,
+  label: string,
+  eventScoreRanges: Map<number, ScoreRange>
+): EventScoreBadge[] {
+  const auditEvents = dialogue?.rowAudit?.events ?? [];
+  const visibleEvents = dialogue?.predEvents ?? [];
+
+  return visibleEvents.map((_, predIndex) => {
+    const matchedAuditIndex = auditEvents.findIndex((event) => event.pred_event_index === predIndex);
+    const eventIndex = matchedAuditIndex >= 0 ? matchedAuditIndex : predIndex;
+    const auditEvent = auditEvents[eventIndex];
+
+    return {
+      ariaLabel: `${label} event digest ${predIndex + 1} score`,
+      range: eventScoreRanges.get(eventIndex),
+      score: auditEvent?.weighted_f1
+    };
+  });
+}
+
+function EventList({
+  events,
+  scoreBadges = []
+}: {
+  events: ExtractedEvent[];
+  scoreBadges?: EventScoreBadge[];
+}) {
   if (events.length === 0) {
     return <p className="empty-list">No events</p>;
   }
 
   return (
     <div className="comparison-event-list">
-      {events.map((event, index) => (
-        <article className="comparison-event" key={`${eventText(event)}-${index}`}>
-          <strong>Event {index + 1}</strong>
-          <p>{eventText(event)}</p>
-          <small>
-            actor {values(event.actor)} / time {values(event.time)} / location{" "}
-            {values(event.location)} / action {values(event.action)}
-          </small>
-        </article>
-      ))}
+      {events.map((event, index) => {
+        const scoreBadge = scoreBadges[index] ?? null;
+        const scoreTone = scoreClass(scoreBadge?.score, scoreBadge?.range);
+
+        return (
+          <article className="comparison-event" key={`${eventText(event)}-${index}`}>
+            <div className="comparison-event-header">
+              <strong>Event {index + 1}</strong>
+              {typeof scoreBadge?.score === "number" && Number.isFinite(scoreBadge.score) ? (
+                <span
+                  aria-label={scoreBadge.ariaLabel}
+                  className={
+                    scoreTone
+                      ? `comparison-event-score ${scoreTone}`
+                      : "comparison-event-score"
+                  }
+                >
+                  Event Level F1 {formatOptionalMetric(scoreBadge.score)}
+                </span>
+              ) : null}
+            </div>
+            <p>{eventText(event)}</p>
+            <small>
+              actor {values(event.actor)} / time {values(event.time)} / location{" "}
+              {values(event.location)} / action {values(event.action)}
+            </small>
+          </article>
+        );
+      })}
     </div>
   );
 }
@@ -366,7 +418,10 @@ export function ComparisonView({ evaluations }: ComparisonViewProps) {
                 {dialogue?.failure ? (
                   <div className="failure-box">{dialogue.failure.reason}</div>
                 ) : null}
-                <EventList events={dialogue?.predEvents ?? []} />
+                <EventList
+                  events={dialogue?.predEvents ?? []}
+                  scoreBadges={eventScoreBadgesFor(dialogue, label, eventScoreRanges)}
+                />
                 <FieldComparisonRows
                   events={dialogue?.rowAudit?.events ?? []}
                   label={label}

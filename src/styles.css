@@ -443,6 +443,38 @@ button:disabled {
   background: #f8fafc;
 }
 
+.comparison-event-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.comparison-event-score {
+  display: inline-block;
+  width: fit-content;
+  padding: 2px 6px;
+  color: #52627a;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border: 1px solid #d9e0ea;
+  border-radius: 4px;
+  background: #ffffff;
+}
+
+.comparison-event-score.score-best {
+  color: #17633a;
+  background: #e9f7ee;
+  border-color: #9bd5af;
+}
+
+.comparison-event-score.score-worst {
+  color: #9f1d35;
+  background: #fff0f1;
+  border-color: #e5a1aa;
+}
+
 .comparison-event p {
   overflow-wrap: anywhere;
 }
