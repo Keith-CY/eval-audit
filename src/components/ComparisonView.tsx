@@ -1,13 +1,30 @@
 import { useEffect, useMemo, useState } from "react";
 import { dialogueF1 } from "../domain/dialogueMetrics";
 import { formatCount, formatOptionalMetric } from "../domain/format";
-import type { DialogueReview, ExtractedEvent, FieldName, LoadedEvaluation } from "../domain/types";
+import type {
+  DialogueReview,
+  EventComparison,
+  ExtractedEvent,
+  FieldComparison,
+  FieldName,
+  LoadedEvaluation
+} from "../domain/types";
 
 interface ComparisonViewProps {
   evaluations: LoadedEvaluation[];
 }
 
 const fields: FieldName[] = ["actor", "time", "location", "action"];
+const emptyFieldComparison: FieldComparison = {
+  gold: [],
+  pred: [],
+  TP: 0,
+  FP: 0,
+  FN: 0,
+  precision: null,
+  recall: null,
+  f1: null
+};
 
 function values(valuesToRender: string[] | null | undefined): string {
   return Array.isArray(valuesToRender) && valuesToRender.length > 0
@@ -77,6 +94,45 @@ function EventList({ events }: { events: ExtractedEvent[] }) {
         </article>
       ))}
     </div>
+  );
+}
+
+function FieldComparisonRows({ events, label }: { events: EventComparison[]; label: string }) {
+  if (events.length === 0) {
+    return <p className="empty-list">No field comparisons</p>;
+  }
+
+  return (
+    <section className="field-comparison" aria-label={`${label} field comparison`}>
+      <h4>Field comparison</h4>
+      {events.map((event, eventIndex) => (
+        <article className="comparison-field-event" key={`${event.match_status}-${eventIndex}`}>
+          <div className="event-card-header">
+            <strong>Event {eventIndex + 1}</strong>
+            <span>
+              {event.match_status} / F1 {formatOptionalMetric(event.weighted_f1 ?? null)}
+            </span>
+          </div>
+          <div className="comparison-field-grid">
+            {fields.map((field) => {
+              const comparison = event.fields?.[field] ?? emptyFieldComparison;
+
+              return (
+                <div className="comparison-field-row" key={field}>
+                  <strong>{field}</strong>
+                  <span>gold: {values(comparison.gold)}</span>
+                  <span>pred: {values(comparison.pred)}</span>
+                  <span>
+                    TP {comparison.TP ?? 0} / FP {comparison.FP ?? 0} / FN {comparison.FN ?? 0} /
+                    F1 {formatOptionalMetric(comparison.f1 ?? null)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </article>
+      ))}
+    </section>
   );
 }
 
@@ -214,6 +270,10 @@ export function ComparisonView({ evaluations }: ComparisonViewProps) {
                 {dialogue?.failure ? (
                   <div className="failure-box">{dialogue.failure.reason}</div>
                 ) : null}
+                <FieldComparisonRows
+                  events={dialogue?.rowAudit?.events ?? []}
+                  label={`Eval ${index + 1}`}
+                />
                 <EventList events={dialogue?.predEvents ?? []} />
               </section>
             );

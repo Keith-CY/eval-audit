@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import JSZip from "jszip";
 import { describe, expect, it } from "vitest";
@@ -53,6 +53,33 @@ async function makeEvaluationZip(options: EvaluationZipOptions = {}): Promise<Fi
     event.match_status = "matched";
     event.pred_event_index = 0;
     event.pred_event = predEvent;
+    event.fields.actor = {
+      ...event.fields.actor,
+      pred: ["speaker_1"],
+      TP: 1,
+      FN: 0,
+      precision: 1,
+      recall: 1,
+      f1: 1
+    };
+    event.fields.time = {
+      ...event.fields.time,
+      pred: ["8点"],
+      TP: 1,
+      FN: 0,
+      precision: 1,
+      recall: 1,
+      f1: 1
+    };
+    event.fields.action = {
+      ...event.fields.action,
+      pred: ["起床"],
+      TP: 1,
+      FN: 0,
+      precision: 1,
+      recall: 1,
+      f1: 1
+    };
     prediction.events = [predEvent];
   }
 
@@ -137,6 +164,28 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: "Eval 1" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Eval 2" })).toBeInTheDocument();
     expect(screen.getAllByText("speaker_18点起床")).toHaveLength(2);
+  });
+
+  it("shows field-level gold and prediction comparisons in the all results view", async () => {
+    render(<App />);
+
+    await userEvent.upload(screen.getByLabelText("Upload evaluation zip"), [
+      await makeEvaluationZip({ artifact: "eval_one" }),
+      await makeEvaluationZip({
+        artifact: "eval_two",
+        weightedF1: 1,
+        predDigest: "speaker_18点起床"
+      })
+    ]);
+
+    await userEvent.click(await screen.findByRole("tab", { name: /All results/ }));
+
+    const evalTwo = screen.getByRole("region", { name: "Eval 2 field comparison" });
+    expect(within(evalTwo).getByText("Field comparison")).toBeInTheDocument();
+    expect(within(evalTwo).getByText("actor")).toBeInTheDocument();
+    expect(within(evalTwo).getByText("gold: speaker_1")).toBeInTheDocument();
+    expect(within(evalTwo).getByText("pred: speaker_1")).toBeInTheDocument();
+    expect(within(evalTwo).getAllByText("TP 1 / FP 0 / FN 0 / F1 100.0%")).toHaveLength(3);
   });
 
   it("shows a readable error and keeps upload available when required files are missing", async () => {
