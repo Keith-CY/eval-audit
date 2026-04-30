@@ -377,6 +377,70 @@ button:disabled {
   align-items: start;
 }
 
+.report-view {
+  display: grid;
+  gap: 16px;
+}
+
+.report-section {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  background: #ffffff;
+  border: 1px solid #d9e0ea;
+  border-radius: 8px;
+}
+
+.report-section-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: end;
+  justify-content: space-between;
+}
+
+.report-section-header h2 {
+  margin: 0;
+}
+
+.report-section-header input {
+  min-width: min(320px, 100%);
+  border: 1px solid #c9d2df;
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: #ffffff;
+}
+
+.report-table-wrap {
+  overflow-x: auto;
+}
+
+.report-table {
+  width: 100%;
+  min-width: 960px;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.report-table th,
+.report-table td {
+  padding: 8px 10px;
+  border: 1px solid #e0e6ef;
+  text-align: left;
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+.report-table th {
+  background: #f8fafc;
+  font-weight: 700;
+}
+
+.report-table tbody tr:nth-child(even) td,
+.report-table tbody tr:nth-child(even) th {
+  background: #fbfcfe;
+}
+
 .comparison-detail,
 .comparison-column {
   display: grid;

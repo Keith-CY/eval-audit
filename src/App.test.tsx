@@ -145,6 +145,45 @@ describe("App", () => {
     );
   });
 
+  it("shows a table report comparing uploaded evaluation bundles", async () => {
+    render(<App />);
+
+    await userEvent.upload(screen.getByLabelText("Upload evaluation zip"), [
+      await makeEvaluationZip({ artifact: "eval_one" }),
+      await makeEvaluationZip({
+        artifact: "eval_two",
+        weightedF1: 1,
+        predDigest: "speaker_18点起床"
+      })
+    ]);
+
+    await userEvent.click(await screen.findByRole("tab", { name: /Report table/ }));
+
+    const summaryTable = screen.getByRole("table", { name: "LLM summary table" });
+    expect(screen.getByRole("heading", { name: "LLM Summary" })).toBeInTheDocument();
+    expect(within(summaryTable).getByText("eval_one")).toBeInTheDocument();
+    expect(within(summaryTable).getByText("eval_two")).toBeInTheDocument();
+    expect(within(summaryTable).getByRole("columnheader", { name: "actor F1" }))
+      .toBeInTheDocument();
+
+    const dialogueTable = screen.getByRole("table", { name: "Dialogue comparison table" });
+    expect(screen.getByRole("heading", { name: "Dialogue Comparison" })).toBeInTheDocument();
+    expect(within(dialogueTable).getByRole("columnheader", { name: "eval_two F1" }))
+      .toBeInTheDocument();
+    expect(within(dialogueTable).getByRole("cell", { name: "Dialogue 56" }))
+      .toBeInTheDocument();
+    expect(within(dialogueTable).getByLabelText("eval_one dialogue 56 F1"))
+      .toHaveClass("score-worst");
+    expect(within(dialogueTable).getByLabelText("eval_two dialogue 56 F1"))
+      .toHaveClass("score-best");
+    expect(within(dialogueTable).getByLabelText("eval_two dialogue 56 F1"))
+      .toHaveTextContent("100.0%");
+
+    await userEvent.type(screen.getByLabelText("Search report dialogue id"), "missing");
+
+    expect(within(dialogueTable).getByText("No matching dialogues")).toBeInTheDocument();
+  });
+
   it("shows gold and every evaluation result for the selected dialogue", async () => {
     render(<App />);
 

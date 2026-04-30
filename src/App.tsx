@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { ComparisonView } from "./components/ComparisonView";
+import { ReportTableView } from "./components/ReportTableView";
 import { UploadPanel } from "./components/UploadPanel";
 import { Workbench } from "./components/Workbench";
 import { loadEvaluationZip } from "./domain/loadEvaluationZip";
 import type { LoadedEvaluation } from "./domain/types";
 
 const comparisonTabId = "all-results";
+const reportTableTabId = "report-table";
 
 function tabLabel(evaluation: LoadedEvaluation, index: number): string {
   return evaluation.dataset.artifact || `Eval ${index + 1}`;
@@ -36,16 +38,28 @@ function DatasetTabs({
         </button>
       ))}
       {evaluations.length > 1 ? (
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTabId === comparisonTabId ? "true" : "false"}
-          className={activeTabId === comparisonTabId ? "dataset-tab active" : "dataset-tab"}
-          onClick={() => onTabChange(comparisonTabId)}
-        >
-          <span>All results</span>
-          <small>{evaluations.length} evals</small>
-        </button>
+        <>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTabId === comparisonTabId ? "true" : "false"}
+            className={activeTabId === comparisonTabId ? "dataset-tab active" : "dataset-tab"}
+            onClick={() => onTabChange(comparisonTabId)}
+          >
+            <span>All results</span>
+            <small>{evaluations.length} evals</small>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTabId === reportTableTabId ? "true" : "false"}
+            className={activeTabId === reportTableTabId ? "dataset-tab active" : "dataset-tab"}
+            onClick={() => onTabChange(reportTableTabId)}
+          >
+            <span>Report table</span>
+            <small>{evaluations.length} evals</small>
+          </button>
+        </>
       ) : null}
     </nav>
   );
@@ -103,6 +117,8 @@ export default function App() {
           ) : null}
           {resolvedActiveTabId === comparisonTabId ? (
             <ComparisonView evaluations={evaluations} />
+          ) : resolvedActiveTabId === reportTableTabId ? (
+            <ReportTableView evaluations={evaluations} />
           ) : (
             <Workbench dataset={activeEvaluation.dataset} />
           )}
