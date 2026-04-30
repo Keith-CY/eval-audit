@@ -181,6 +181,12 @@ describe("App", () => {
     await userEvent.click(await screen.findByRole("tab", { name: /All results/ }));
 
     const evalTwo = screen.getByRole("region", { name: "Eval 2 field comparison" });
+    const evalTwoDigest = screen.getAllByText("speaker_18点起床")[1];
+    const fieldHeading = within(evalTwo).getByText("Field comparison");
+
+    expect(
+      Boolean(evalTwoDigest.compareDocumentPosition(fieldHeading) & Node.DOCUMENT_POSITION_FOLLOWING)
+    ).toBe(true);
     expect(within(evalTwo).getByText("Field comparison")).toBeInTheDocument();
     expect(within(evalTwo).getByText("actor")).toBeInTheDocument();
     expect(within(evalTwo).getByText("gold: speaker_1")).toBeInTheDocument();

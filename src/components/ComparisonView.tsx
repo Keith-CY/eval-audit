@@ -270,11 +270,11 @@ export function ComparisonView({ evaluations }: ComparisonViewProps) {
                 {dialogue?.failure ? (
                   <div className="failure-box">{dialogue.failure.reason}</div>
                 ) : null}
+                <EventList events={dialogue?.predEvents ?? []} />
                 <FieldComparisonRows
                   events={dialogue?.rowAudit?.events ?? []}
                   label={`Eval ${index + 1}`}
                 />
-                <EventList events={dialogue?.predEvents ?? []} />
               </section>
             );
           })}
