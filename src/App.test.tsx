@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import JSZip from "jszip";
 import { describe, expect, it } from "vitest";
@@ -38,6 +38,102 @@ describe("App", () => {
 
     expect(await screen.findByText("google_gemma_4_31B_it")).toBeInTheDocument();
     expect(screen.getAllByText("Dialogue 56")).toHaveLength(2);
+  });
+
+  it("loads a flat events JSONL file from the flat events tab", async () => {
+    render(<App />);
+
+    await userEvent.click(screen.getByRole("tab", { name: "Flat events JSONL" }));
+    await userEvent.upload(
+      screen.getByLabelText("Upload flat events JSONL"),
+      new File(
+        [
+          [
+            JSON.stringify({
+              source: "gold",
+              dialogue_id: "1",
+              outcome: "win",
+              typed_score: null,
+              event_index: 1,
+              source_order: 1,
+              actor: ["speaker_1"],
+              time: ["Friday"],
+              location: null,
+              action: ["movie"],
+              digest: "speaker_1 Friday movie"
+            }),
+            JSON.stringify({
+              source: "base",
+              dialogue_id: "1",
+              outcome: "win",
+              typed_score: 0.5,
+              event_index: 1,
+              source_order: 1,
+              actor: ["speaker_2"],
+              time: null,
+              location: ["cinema"],
+              action: ["movie"],
+              digest: "speaker_2 cinema movie"
+            })
+          ].join("\n")
+        ],
+        "events.flat.jsonl",
+        { type: "application/jsonl" }
+      )
+    );
+
+    expect(await screen.findByText("events.flat.jsonl")).toBeInTheDocument();
+    expect(screen.getAllByText("Dialogue 1")).toHaveLength(2);
+    expect(screen.getAllByText("speaker_1").length).toBeGreaterThan(0);
+    expect(screen.getByText("cinema")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /show digest for gold event 1/i }));
+
+    expect(document.querySelector(".flat-event-digest")?.textContent).toContain(
+      "speaker_1 Friday movie"
+    );
+  });
+
+  it("loads a flat events JSONL file dropped onto the flat events upload panel", async () => {
+    render(<App />);
+
+    await userEvent.click(screen.getByRole("tab", { name: "Flat events JSONL" }));
+
+    fireEvent.drop(screen.getByRole("region", { name: "Upload flat events artifact" }), {
+      dataTransfer: {
+        files: [
+          new File(
+            [
+              JSON.stringify({
+                source: "gold",
+                dialogue_id: "7",
+                outcome: "tie",
+                typed_score: null,
+                event_index: 1,
+                source_order: 1,
+                actor: ["speaker_1"],
+                time: ["Saturday"],
+                location: null,
+                action: ["dinner"],
+                digest: "speaker_1 Saturday dinner"
+              })
+            ],
+            "events.flat.jsonl",
+            { type: "application/jsonl" }
+          )
+        ]
+      }
+    });
+
+    expect(await screen.findByText("events.flat.jsonl")).toBeInTheDocument();
+    expect(screen.getAllByText("Dialogue 7")).toHaveLength(2);
+    expect(screen.getByText("Saturday")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /show digest for gold event 1/i }));
+
+    expect(document.querySelector(".flat-event-digest")?.textContent).toContain(
+      "speaker_1 Saturday dinner"
+    );
   });
 
   it("shows a readable error and keeps upload available when required files are missing", async () => {

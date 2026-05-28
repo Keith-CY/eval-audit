@@ -138,3 +138,30 @@ export interface ReviewDataset {
   dialogues: DialogueReview[];
   warnings: string[];
 }
+
+export interface FlatEventRecord extends ExtractedEvent {
+  source: string;
+  dialogue_id: string;
+  outcome: string | null;
+  typed_score: number | null;
+  event_index: number | null;
+}
+
+export interface FlatEventsDialogue {
+  dialogue_id: string;
+  outcome: string | null;
+  outcomes: string[];
+  typedScores: Record<string, number | null>;
+  eventsBySource: Record<string, FlatEventRecord[]>;
+  totalEvents: number;
+}
+
+export interface FlatEventsDataset {
+  artifact: string;
+  totalEvents: number;
+  sources: string[];
+  sourceCounts: Record<string, number>;
+  outcomeCounts: Record<string, number>;
+  dialogues: FlatEventsDialogue[];
+  warnings: string[];
+}
