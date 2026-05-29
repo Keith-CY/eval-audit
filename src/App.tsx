@@ -1,34 +1,98 @@
 import { useState } from "react";
+import { FlatEventsWorkbench } from "./components/FlatEventsWorkbench";
 import { UploadPanel } from "./components/UploadPanel";
 import { Workbench } from "./components/Workbench";
+import { loadFlatEventsJsonl } from "./domain/loadFlatEventsJsonl";
 import { loadEvaluationZip } from "./domain/loadEvaluationZip";
-import type { ReviewDataset } from "./domain/types";
+import type { FlatEventsDataset, ReviewDataset } from "./domain/types";
+
+type ActiveTab = "evaluation" | "flat";
 
 export default function App() {
+  const [activeTab, setActiveTab] = useState<ActiveTab>("evaluation");
   const [dataset, setDataset] = useState<ReviewDataset | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [flatDataset, setFlatDataset] = useState<FlatEventsDataset | null>(null);
+  const [evaluationLoading, setEvaluationLoading] = useState(false);
+  const [flatLoading, setFlatLoading] = useState(false);
+  const [evaluationError, setEvaluationError] = useState<string | null>(null);
+  const [flatError, setFlatError] = useState<string | null>(null);
 
-  async function handleFileSelected(file: File) {
-    setLoading(true);
-    setError(null);
+  async function handleEvaluationFileSelected(file: File) {
+    setEvaluationLoading(true);
+    setEvaluationError(null);
 
     try {
       setDataset(await loadEvaluationZip(file));
     } catch (loadError) {
       setDataset(null);
-      setError(loadError instanceof Error ? loadError.message : "Could not load evaluation zip");
+      setEvaluationError(
+        loadError instanceof Error ? loadError.message : "Could not load evaluation zip"
+      );
     } finally {
-      setLoading(false);
+      setEvaluationLoading(false);
+    }
+  }
+
+  async function handleFlatFileSelected(file: File) {
+    setFlatLoading(true);
+    setFlatError(null);
+
+    try {
+      setFlatDataset(await loadFlatEventsJsonl(file));
+    } catch (loadError) {
+      setFlatDataset(null);
+      setFlatError(
+        loadError instanceof Error ? loadError.message : "Could not load flat events JSONL"
+      );
+    } finally {
+      setFlatLoading(false);
     }
   }
 
   return (
     <main className="app-shell">
-      {dataset ? (
-        <Workbench dataset={dataset} />
+      <nav className="mode-tabs" role="tablist" aria-label="Artifact type">
+        <button
+          aria-selected={activeTab === "evaluation"}
+          role="tab"
+          type="button"
+          onClick={() => setActiveTab("evaluation")}
+        >
+          Evaluation zip
+        </button>
+        <button
+          aria-selected={activeTab === "flat"}
+          role="tab"
+          type="button"
+          onClick={() => setActiveTab("flat")}
+        >
+          Flat events JSONL
+        </button>
+      </nav>
+      {activeTab === "evaluation" ? (
+        dataset ? (
+          <Workbench dataset={dataset} />
+        ) : (
+          <UploadPanel
+            loading={evaluationLoading}
+            error={evaluationError}
+            onFileSelected={handleEvaluationFileSelected}
+          />
+        )
+      ) : flatDataset ? (
+        <FlatEventsWorkbench dataset={flatDataset} />
       ) : (
-        <UploadPanel loading={loading} error={error} onFileSelected={handleFileSelected} />
+        <UploadPanel
+          loading={flatLoading}
+          error={flatError}
+          title="Flat Events Review"
+          description="Upload one flat events JSONL file. Events are grouped by dialogue and source in this browser."
+          buttonLabel="Choose JSONL"
+          accept=".jsonl,application/jsonl,application/x-ndjson,text/plain"
+          inputLabel="Upload flat events JSONL"
+          sectionLabel="Upload flat events artifact"
+          onFileSelected={handleFlatFileSelected}
+        />
       )}
     </main>
   );
