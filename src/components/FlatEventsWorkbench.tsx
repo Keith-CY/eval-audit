@@ -1,5 +1,5 @@
 import { type ReactNode, useMemo, useState } from "react";
-import type { FlatEventRecord, FlatEventsDataset } from "../domain/types";
+import type { FlatEventRecord, FlatEventsDataset, FlatEventsDialogue } from "../domain/types";
 
 interface FlatEventsWorkbenchProps {
   dataset: FlatEventsDataset;
@@ -233,6 +233,39 @@ function EventRow({ event, activeTerms, onHover, onLeave }: EventRowProps) {
   );
 }
 
+interface DialogueTextProps {
+  dialogue: FlatEventsDialogue;
+}
+
+function DialogueText({ dialogue }: DialogueTextProps) {
+  const [expanded, setExpanded] = useState(false);
+  const lines = dialogue.dialogue;
+
+  if (!lines || lines.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="flat-dialogue-text-section">
+      <button
+        aria-expanded={expanded}
+        className="flat-dialogue-text-toggle"
+        type="button"
+        onClick={() => setExpanded((prev) => !prev)}
+      >
+        {expanded ? "Hide" : "Show"} dialogue ({lines.length} lines)
+      </button>
+      {expanded ? (
+        <section className="dialogue-text" aria-label="Dialogue source text">
+          {lines.map((line, index) => (
+            <p key={`${dialogue.dialogue_id}-${index}`}>{line}</p>
+          ))}
+        </section>
+      ) : null}
+    </div>
+  );
+}
+
 export function FlatEventsWorkbench({ dataset }: FlatEventsWorkbenchProps) {
   const [activeDialogueId, setActiveDialogueId] = useState<string | null>(
     dataset.dialogues[0]?.dialogue_id ?? null
@@ -360,6 +393,9 @@ export function FlatEventsWorkbench({ dataset }: FlatEventsWorkbenchProps) {
                   </p>
                 </div>
               </div>
+              {dataset.hasDialogueText ? (
+                <DialogueText dialogue={activeDialogue} />
+              ) : null}
               <div className="source-columns">
                 {orderedSources.map((source) => {
                   const events = activeDialogue.eventsBySource[source] ?? [];

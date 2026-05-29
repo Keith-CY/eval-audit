@@ -145,13 +145,10 @@ function publicEvent(event: FlatEventWithLine): FlatEventRecord {
   };
 }
 
-export async function loadFlatEventsJsonl(file: File): Promise<FlatEventsDataset> {
-  assertFileWithinLimits(file);
-
-  const text = await file.text();
-  const rawRecords = parseJsonl<unknown>(text, file.name);
+export function parseFlatEventsText(text: string, sourceName: string, artifact: string): FlatEventsDataset {
+  const rawRecords = parseJsonl<unknown>(text, sourceName);
   const records = rawRecords.map((record, index) =>
-    normalizeFlatEvent(record, `${file.name} line ${index + 1}`, index + 1)
+    normalizeFlatEvent(record, `${sourceName} line ${index + 1}`, index + 1)
   );
 
   const sources = [...new Set(records.map((record) => record.source))].sort(compareSources);
@@ -205,7 +202,7 @@ export async function loadFlatEventsJsonl(file: File): Promise<FlatEventsDataset
     });
 
   return {
-    artifact: file.name,
+    artifact,
     totalEvents: records.length,
     sources,
     sourceCounts,
@@ -213,4 +210,10 @@ export async function loadFlatEventsJsonl(file: File): Promise<FlatEventsDataset
     dialogues,
     warnings: records.length === 0 ? ["Flat events JSONL did not contain any events."] : []
   };
+}
+
+export async function loadFlatEventsJsonl(file: File): Promise<FlatEventsDataset> {
+  assertFileWithinLimits(file);
+  const text = await file.text();
+  return parseFlatEventsText(text, file.name, file.name);
 }

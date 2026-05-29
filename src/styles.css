@@ -341,6 +341,20 @@ button:disabled {
   font-size: 0.9rem;
 }
 
+.flat-dialogue-text-section {
+  display: grid;
+  gap: 8px;
+}
+
+.flat-dialogue-text-toggle {
+  justify-self: start;
+  min-height: 30px;
+  padding: 0 12px;
+  font-size: 0.85rem;
+  color: #235789;
+  border-color: #235789;
+}
+
 .flat-event-stack {
   display: grid;
   gap: 10px;

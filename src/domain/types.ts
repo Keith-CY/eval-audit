@@ -154,6 +154,7 @@ export interface FlatEventsDialogue {
   typedScores: Record<string, number | null>;
   eventsBySource: Record<string, FlatEventRecord[]>;
   totalEvents: number;
+  dialogue?: string[] | null;
 }
 
 export interface FlatEventsDataset {
@@ -164,4 +165,5 @@ export interface FlatEventsDataset {
   outcomeCounts: Record<string, number>;
   dialogues: FlatEventsDialogue[];
   warnings: string[];
+  hasDialogueText?: boolean;
 }

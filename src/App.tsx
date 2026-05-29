@@ -2,7 +2,7 @@ import { useState } from "react";
 import { FlatEventsWorkbench } from "./components/FlatEventsWorkbench";
 import { UploadPanel } from "./components/UploadPanel";
 import { Workbench } from "./components/Workbench";
-import { loadFlatEventsJsonl } from "./domain/loadFlatEventsJsonl";
+import { loadFlatEventsZip } from "./domain/loadFlatEventsZip";
 import { loadEvaluationZip } from "./domain/loadEvaluationZip";
 import type { FlatEventsDataset, ReviewDataset } from "./domain/types";
 
@@ -38,11 +38,11 @@ export default function App() {
     setFlatError(null);
 
     try {
-      setFlatDataset(await loadFlatEventsJsonl(file));
+      setFlatDataset(await loadFlatEventsZip(file));
     } catch (loadError) {
       setFlatDataset(null);
       setFlatError(
-        loadError instanceof Error ? loadError.message : "Could not load flat events JSONL"
+        loadError instanceof Error ? loadError.message : "Could not load flat events ZIP"
       );
     } finally {
       setFlatLoading(false);
@@ -86,10 +86,10 @@ export default function App() {
           loading={flatLoading}
           error={flatError}
           title="Flat Events Review"
-          description="Upload one flat events JSONL file. Events are grouped by dialogue and source in this browser."
-          buttonLabel="Choose JSONL"
-          accept=".jsonl,application/jsonl,application/x-ndjson,text/plain"
-          inputLabel="Upload flat events JSONL"
+          description="Upload a ZIP containing events.flat.jsonl and (optionally) a dialogue source JSONL. Both files are parsed in this browser."
+          buttonLabel="Choose ZIP"
+          accept=".zip,application/zip"
+          inputLabel="Upload flat events ZIP"
           sectionLabel="Upload flat events artifact"
           onFileSelected={handleFlatFileSelected}
         />
