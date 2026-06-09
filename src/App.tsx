@@ -1,21 +1,30 @@
 import { useState } from "react";
-import { FlatEventsWorkbench } from "./components/FlatEventsWorkbench";
+import { GoldTopicDatasetWorkbench } from "./components/GoldTopicDatasetWorkbench";
+import { SemanticEventAuditImportPanel } from "./components/SemanticEventAuditImportPanel";
+import { SemanticEventAuditWorkbench } from "./components/SemanticEventAuditWorkbench";
 import { UploadPanel } from "./components/UploadPanel";
 import { Workbench } from "./components/Workbench";
-import { loadFlatEventsZip } from "./domain/loadFlatEventsZip";
 import { loadEvaluationZip } from "./domain/loadEvaluationZip";
-import type { FlatEventsDataset, ReviewDataset } from "./domain/types";
+import { loadGoldTopicDataset } from "./domain/loadGoldTopicDataset";
+import {
+  loadSemanticEventAuditFromGitHub,
+  loadSemanticEventAuditZip
+} from "./domain/loadSemanticEventAudit";
+import type { GoldTopicDataset, ReviewDataset, SemanticEventAuditDataset } from "./domain/types";
 
-type ActiveTab = "evaluation" | "flat";
+type ActiveTab = "evaluation" | "semantic" | "gold-topic";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>("evaluation");
   const [dataset, setDataset] = useState<ReviewDataset | null>(null);
-  const [flatDataset, setFlatDataset] = useState<FlatEventsDataset | null>(null);
+  const [semanticDataset, setSemanticDataset] = useState<SemanticEventAuditDataset | null>(null);
+  const [goldTopicDataset, setGoldTopicDataset] = useState<GoldTopicDataset | null>(null);
   const [evaluationLoading, setEvaluationLoading] = useState(false);
-  const [flatLoading, setFlatLoading] = useState(false);
+  const [semanticLoading, setSemanticLoading] = useState(false);
+  const [goldTopicLoading, setGoldTopicLoading] = useState(false);
   const [evaluationError, setEvaluationError] = useState<string | null>(null);
-  const [flatError, setFlatError] = useState<string | null>(null);
+  const [semanticError, setSemanticError] = useState<string | null>(null);
+  const [goldTopicError, setGoldTopicError] = useState<string | null>(null);
 
   async function handleEvaluationFileSelected(file: File) {
     setEvaluationLoading(true);
@@ -33,19 +42,51 @@ export default function App() {
     }
   }
 
-  async function handleFlatFileSelected(file: File) {
-    setFlatLoading(true);
-    setFlatError(null);
+  async function handleSemanticFileSelected(file: File) {
+    setSemanticLoading(true);
+    setSemanticError(null);
 
     try {
-      setFlatDataset(await loadFlatEventsZip(file));
+      setSemanticDataset(await loadSemanticEventAuditZip(file));
     } catch (loadError) {
-      setFlatDataset(null);
-      setFlatError(
-        loadError instanceof Error ? loadError.message : "Could not load flat events ZIP"
+      setSemanticDataset(null);
+      setSemanticError(
+        loadError instanceof Error ? loadError.message : "Could not load semantic event audit"
       );
     } finally {
-      setFlatLoading(false);
+      setSemanticLoading(false);
+    }
+  }
+
+  async function handleSemanticGitHubImport(input: { token: string; directoryUrl: string }) {
+    setSemanticLoading(true);
+    setSemanticError(null);
+
+    try {
+      setSemanticDataset(await loadSemanticEventAuditFromGitHub(input));
+    } catch (loadError) {
+      setSemanticDataset(null);
+      setSemanticError(
+        loadError instanceof Error ? loadError.message : "Could not load GitHub directory"
+      );
+    } finally {
+      setSemanticLoading(false);
+    }
+  }
+
+  async function handleGoldTopicFileSelected(file: File) {
+    setGoldTopicLoading(true);
+    setGoldTopicError(null);
+
+    try {
+      setGoldTopicDataset(await loadGoldTopicDataset(file));
+    } catch (loadError) {
+      setGoldTopicDataset(null);
+      setGoldTopicError(
+        loadError instanceof Error ? loadError.message : "Could not load gold topic dataset"
+      );
+    } finally {
+      setGoldTopicLoading(false);
     }
   }
 
@@ -61,12 +102,20 @@ export default function App() {
           Evaluation zip
         </button>
         <button
-          aria-selected={activeTab === "flat"}
+          aria-selected={activeTab === "semantic"}
           role="tab"
           type="button"
-          onClick={() => setActiveTab("flat")}
+          onClick={() => setActiveTab("semantic")}
         >
-          Flat events JSONL
+          Semantic event audit
+        </button>
+        <button
+          aria-selected={activeTab === "gold-topic"}
+          role="tab"
+          type="button"
+          onClick={() => setActiveTab("gold-topic")}
+        >
+          Gold topic dataset
         </button>
       </nav>
       {activeTab === "evaluation" ? (
@@ -79,19 +128,30 @@ export default function App() {
             onFileSelected={handleEvaluationFileSelected}
           />
         )
-      ) : flatDataset ? (
-        <FlatEventsWorkbench dataset={flatDataset} />
+      ) : activeTab === "semantic" ? (
+        semanticDataset ? (
+          <SemanticEventAuditWorkbench dataset={semanticDataset} />
+        ) : (
+          <SemanticEventAuditImportPanel
+            loading={semanticLoading}
+            error={semanticError}
+            onFileSelected={handleSemanticFileSelected}
+            onGitHubImport={handleSemanticGitHubImport}
+          />
+        )
+      ) : goldTopicDataset ? (
+        <GoldTopicDatasetWorkbench dataset={goldTopicDataset} />
       ) : (
         <UploadPanel
-          loading={flatLoading}
-          error={flatError}
-          title="Flat Events Review"
-          description="Upload a ZIP containing events.flat.jsonl and (optionally) a dialogue source JSONL. Both files are parsed in this browser."
-          buttonLabel="Choose ZIP"
-          accept=".zip,application/zip"
-          inputLabel="Upload flat events ZIP"
-          sectionLabel="Upload flat events artifact"
-          onFileSelected={handleFlatFileSelected}
+          loading={goldTopicLoading}
+          error={goldTopicError}
+          title="Gold Topic Dataset"
+          description="Upload one gold topic JSONL file. The file is parsed in this browser."
+          buttonLabel="Choose JSONL"
+          accept=".jsonl,application/jsonl,application/x-ndjson,application/json"
+          inputLabel="Upload gold topic dataset JSONL"
+          sectionLabel="Upload gold topic dataset"
+          onFileSelected={handleGoldTopicFileSelected}
         />
       )}
     </main>
